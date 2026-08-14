@@ -28,17 +28,11 @@ export async function runMigrations(pool: Pool): Promise<void> {
     if (applied.rows[0]) continue;
 
     const sql = readFileSync(join(migrationsDir, file), "utf8");
-    await pool.query("BEGIN");
-    try {
-      await pool.query(sql);
-      await pool.query(`INSERT INTO schema_migrations (filename) VALUES ($1)`, [
-        file,
-      ]);
-      await pool.query("COMMIT");
-      console.log(`Applied migration ${file}`);
-    } catch (error) {
-      await pool.query("ROLLBACK");
-      throw error;
-    }
+    // DDL in PostgreSQL auto-commits; do not wrap schema files in BEGIN/COMMIT.
+    await pool.query(sql);
+    await pool.query(`INSERT INTO schema_migrations (filename) VALUES ($1)`, [
+      file,
+    ]);
+    console.log(`Applied migration ${file}`);
   }
 }

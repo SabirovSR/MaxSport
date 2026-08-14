@@ -8,6 +8,7 @@
     "dev": "npm run build:packages && npm run dev -w @maxsport/api",
     "dev:app": "npm run dev -w @maxsport/mini-app",
     "migrate": "npm run migrate -w @maxsport/api",
+    "seed:demo": "npm run seed:demo -w @maxsport/api",
     "docker:dev": "docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.dev.yml up --build",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",

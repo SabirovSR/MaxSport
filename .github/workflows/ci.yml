@@ -103,12 +103,19 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          script_stop: true
+          script_stop: false
           envs: GHCR_USER,GHCR_TOKEN,GITHUB_SHA
           script: |
             set -euo pipefail
             APP_DIR="/opt/maxsport"
             IMAGE_TAG="sha-${GITHUB_SHA}"
+
+            dump_api_logs() {
+              echo "==> api / migrate logs:"
+              docker compose logs --tail=200 migrate api || true
+              docker compose ps -a
+            }
+            trap 'dump_api_logs' ERR
 
             echo "==> Checking runtime files in ${APP_DIR}"
             if [ ! -d "$APP_DIR" ]; then
@@ -139,14 +146,19 @@ jobs:
 
             echo "==> docker compose up -d"
             docker compose up -d || {
-              echo "==> compose up failed, api logs:"
-              docker compose logs --tail=120 api || true
-              docker compose ps -a
+              echo "==> compose up failed"
+              dump_api_logs
               exit 1
             }
 
             echo "==> docker compose ps"
             docker compose ps
+
+            if ! docker compose ps api --format '{{.Health}}' 2>/dev/null | grep -q healthy; then
+              echo "==> api not healthy after compose up"
+              dump_api_logs
+              exit 1
+            fi
 
             echo "==> healthcheck"
             sleep 5
@@ -158,8 +170,7 @@ jobs:
               echo "OK: local health (HTTPS may still be provisioning)"
             else
               echo "ERROR: healthcheck failed"
-              docker compose logs --tail=120 api || true
-              docker compose ps -a
+              dump_api_logs
               exit 1
             fi
 

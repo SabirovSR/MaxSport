@@ -1,4 +1,6 @@
 -- MAX Sport schema (PostgreSQL + PostGIS)
+-- Migrations: idempotent DDL only. Demo data → deploy/seeds/ + npm run seed:demo
+
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -51,8 +53,6 @@ CREATE TABLE IF NOT EXISTS slots (
   UNIQUE (lobby_id, slot_index)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_presence_slot ON presence_records(slot_id);
-
 CREATE TABLE IF NOT EXISTS presence_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slot_id UUID NOT NULL REFERENCES slots(id) ON DELETE CASCADE,
@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS presence_records (
   status TEXT NOT NULL DEFAULT 'expected' CHECK (status IN ('expected', 'on_the_way', 'on_site', 'no_show', 'cancelled')),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_presence_slot ON presence_records(slot_id);
 
 CREATE TABLE IF NOT EXISTS payment_holds (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

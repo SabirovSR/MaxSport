@@ -20,6 +20,14 @@ export interface MaxBotAdapter {
 }
 
 export function createMaxBotAdapter(token: string): MaxBotAdapter {
+  if (!token) {
+    return {
+      async handleUpdate() {},
+      registerCommand() {},
+      registerCallback() {},
+    };
+  }
+
   const bot = new Bot(token);
   let botInfoLoaded = false;
   const callbacks = new Map<

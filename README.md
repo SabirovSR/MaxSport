@@ -18,11 +18,18 @@ npm run dev
 npm run dev:app
 ```
 
-Миграции:
+Миграции (только схема):
 
 ```bash
-npm run migrate -w @maxsport/api
-# или RUN_MIGRATIONS=true в docker
+npm run migrate
+# в Docker: сервис migrate в docker-compose.yml
+```
+
+Demo seed для питча (после первого входа в Mini App):
+
+```bash
+npm run seed:demo
+# на сервере: docker compose run --rm api node apps/api/dist/seed-demo.js
 ```
 
 Проверки:

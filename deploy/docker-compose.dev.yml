@@ -1,4 +1,17 @@
 services:
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: maxsport:local
+    environment:
+      DATABASE_URL: postgresql://maxsport:${POSTGRES_PASSWORD:-maxsport}@postgres:5432/maxsport
+    command: ["node", "apps/api/dist/migrate.js"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     build:
       context: ..
@@ -11,8 +24,9 @@ services:
       REDIS_URL: redis://redis:6379
       PUBLIC_URL: http://localhost:3000
       PORT: "3000"
-      RUN_MIGRATIONS: "true"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

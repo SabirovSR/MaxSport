@@ -29,6 +29,7 @@ COPY --from=build /app/packages ./packages
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/mini-app/dist ./apps/mini-app/dist
 COPY deploy/migrations ./deploy/migrations
+COPY deploy/seeds ./deploy/seeds
 COPY --from=prod-deps /app/node_modules ./node_modules
 
 ENV NODE_ENV=production

@@ -5,7 +5,7 @@
 ## Подготовка
 
 1. На VPS: `.env` с `MAX_BOT_TOKEN`, `WEBHOOK_SECRET`, `POSTGRES_PASSWORD`
-2. Seed (после первого входа в Mini App): `npm run migrate -w @maxsport/api` (включает `003_pitch_seed.sql` если пользователь есть)
+2. Seed (после первого входа в Mini App): `npm run seed:demo` — demo-площадка и горящее лобби
 3. Заранее создать «горящее» Лобби: 1 свободный Слот «Связующий», старт через 2–3 часа
 
 ## Сценарий live

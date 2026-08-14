@@ -21,7 +21,6 @@ import {
   registerWebhookRoutes,
   registerWebhookSubscription,
 } from "./webhook.js";
-import { runMigrations } from "./migrate-runner.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -44,10 +43,6 @@ async function main() {
   const redisUrl = env("REDIS_URL", "redis://localhost:6379");
 
   const pool = createPool(databaseUrl);
-
-  if (process.env.RUN_MIGRATIONS === "true") {
-    await runMigrations(pool);
-  }
 
   const venues = createVenueRepository(pool);
   const lobbies = createLobbyService(pool, venues);
@@ -137,6 +132,8 @@ async function main() {
     publicUrl,
   });
 
+  await app.listen({ port, host: "0.0.0.0" });
+
   notifications.start();
 
   if (botToken && webhookSecret && publicUrl.startsWith("https")) {
@@ -147,11 +144,9 @@ async function main() {
       app.log.warn({ err: error }, "Webhook subscription failed");
     }
   }
-
-  await app.listen({ port, host: "0.0.0.0" });
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error("API startup failed:", error);
   process.exit(1);
 });

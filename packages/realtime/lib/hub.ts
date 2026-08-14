@@ -15,6 +15,12 @@ export function createRealtimeHub(redisUrl: string): RealtimeHub {
   const sub = new Redis(redisUrl);
   const local = new EventEmitter();
 
+  const logRedisError = (role: string) => (error: Error) => {
+    console.error(`Redis ${role} error`, error);
+  };
+  pub.on("error", logRedisError("pub"));
+  sub.on("error", logRedisError("sub"));
+
   sub.on("message", (channel: string, message: string) => {
     try {
       local.emit(channel, JSON.parse(message));

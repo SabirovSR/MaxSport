@@ -1,5 +1,6 @@
--- Demo venues and a hot lobby (run after at least one user exists via Mini App)
--- Usage: psql $DATABASE_URL -f deploy/migrations/003_pitch_seed.sql
+-- Demo pitch data: venue + hot volleyball lobby (12 slots, 1 role).
+-- Idempotent. Inserts nothing until at least one user exists (Mini App login).
+-- Run: npm run seed:demo  (or docker compose run --rm api node apps/api/dist/seed-demo.js)
 
 INSERT INTO venues (id, name, address, location, created_by, venue_chat_id)
 SELECT
@@ -14,7 +15,6 @@ ORDER BY u.created_at
 LIMIT 1
 ON CONFLICT (id) DO NOTHING;
 
--- Hot volleyball lobby starting in 2 hours (only if organizer exists)
 INSERT INTO lobbies (
   id, sport, game_level, status, start_at, is_recurring, venue_id, organizer_id,
   rent_total, deposit_enabled, slot_count
@@ -55,7 +55,7 @@ WHERE s.lobby_id = '00000000-0000-4000-8000-000000000010'
 ON CONFLICT (slot_id) DO NOTHING;
 
 INSERT INTO scheduled_jobs (lobby_id, kind, run_at)
-SELECT '00000000-0000-4000-8000-000000000010', j.kind, l.start_at + j.offset
+SELECT '00000000-0000-4000-8000-000000000010', j.kind, l.start_at + j.run_offset
 FROM lobbies l
 CROSS JOIN (
   VALUES
@@ -64,6 +64,6 @@ CROSS JOIN (
     ('reminder_t30', INTERVAL '-30 minutes'),
     ('venue_ping_t60', INTERVAL '-60 minutes'),
     ('karma_poll', INTERVAL '3 hours')
-) AS j(kind, offset)
+) AS j(kind, run_offset)
 WHERE l.id = '00000000-0000-4000-8000-000000000010'
 ON CONFLICT (lobby_id, kind) DO NOTHING;

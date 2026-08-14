@@ -18,16 +18,31 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  migrate:
+    image: ghcr.io/sabirovsr/maxsport:${IMAGE_TAG:-local}
+    env_file:
+      - .env
+    command: ["node", "apps/api/dist/migrate.js"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   api:
     image: ghcr.io/sabirovsr/maxsport:${IMAGE_TAG:-local}
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      RUN_MIGRATIONS: "true"
     expose:
       - "3000"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -37,7 +52,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 45s
     logging:
       driver: json-file
       options:
