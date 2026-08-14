@@ -13,6 +13,10 @@ COPY . .
 RUN npm run build -w @maxsport/mini-app
 RUN npm run build -w @maxsport/api
 
+FROM build AS prod-deps
+ENV HUSKY=0
+RUN npm prune --omit=dev
+
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 
@@ -26,8 +30,7 @@ COPY packages ./packages
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/mini-app/dist ./apps/mini-app/dist
 COPY deploy/migrations ./deploy/migrations
-
-RUN npm install --omit=dev --workspace=@maxsport/api
+COPY --from=prod-deps /app/node_modules ./node_modules
 
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -36,4 +39,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --retries=5 \
   CMD wget -qO- http://127.0.0.1:3000/healthz || exit 1
 
-CMD ["node", "apps/api/dist/server.js"]
+CMD ["node", "--experimental-strip-types", "apps/api/dist/server.js"]
