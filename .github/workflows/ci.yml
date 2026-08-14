@@ -17,8 +17,8 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -38,7 +38,7 @@ jobs:
       packages: write
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Lowercase image owner
         id: meta
@@ -49,16 +49,16 @@ jobs:
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
           echo "tag=sha-${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/Dockerfile
@@ -84,6 +84,20 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Validate deploy secrets
+        run: |
+          missing=""
+          [ -z "${{ secrets.SSH_HOST }}" ] && missing="${missing} SSH_HOST"
+          [ -z "${{ secrets.SSH_USER }}" ] && missing="${missing} SSH_USER"
+          [ -z "${{ secrets.SSH_KEY }}" ] && missing="${missing} SSH_KEY"
+          [ -z "${{ secrets.GHCR_USER }}" ] && missing="${missing} GHCR_USER"
+          [ -z "${{ secrets.GHCR_TOKEN }}" ] && missing="${missing} GHCR_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing GitHub Actions secrets:$missing"
+            echo "See deploy/GITHUB_SECRETS.md"
+            exit 1
+          fi
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -163,7 +177,7 @@ jobs:
       actions: read
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Resolve notify payload
         id: meta

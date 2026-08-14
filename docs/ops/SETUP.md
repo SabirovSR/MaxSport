@@ -211,13 +211,11 @@ chmod 600 ~/.ssh/authorized_keys
 ssh -i $env:USERPROFILE\.ssh\deploy_gha -o IdentitiesOnly=yes deploy@135.106.186.253 "echo gha-key-ok"
 ```
 
-Host key для Actions (локально):
+Host key для Actions (локально) — опционально, если понадобится raw SSH вне `appleboy/ssh-action`:
 
 ```powershell
 ssh-keyscan -t ed25519,rsa 135.106.186.253
 ```
-
-Сохрани вывод целиком — это секрет `DEPLOY_KNOWN_HOSTS`.
 
 ---
 
@@ -225,16 +223,21 @@ ssh-keyscan -t ed25519,rsa 135.106.186.253
 
 ## 7. Секреты GitHub
 
+Полная таблица и чеклист первого deploy: [deploy/GITHUB_SECRETS.md](../../deploy/GITHUB_SECRETS.md).
+
 Репозиторий → Settings → Secrets and variables → Actions.
 
 
-| Secret               | Откуда                                                                                                                                                |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DEPLOY_SSH_KEY`     | содержимое файла `deploy_gha` **без** `.pub` (приватный ключ)                                                                                         |
-| `DEPLOY_HOST`        | `135.106.186.253`                                                                                                                                     |
-| `DEPLOY_USER`        | `deploy`                                                                                                                                              |
-| `DEPLOY_KNOWN_HOSTS` | вывод `ssh-keyscan`                                                                                                                                   |
-| `GHCR_PULL_TOKEN`    | PAT: GitHub → Settings → Developer settings → Fine-grained token, только этот repo, permission **Packages: Read**. Либо classic PAT с `read:packages` |
+| Secret               | Откуда                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| `SSH_HOST`           | `135.106.186.253`                                                                             |
+| `SSH_USER`           | `deploy`                                                                                      |
+| `SSH_KEY`            | содержимое файла `deploy_gha` **без** `.pub` (приватный ключ, только для Actions)             |
+| `GHCR_USER`          | `sabirovsr` (GitHub username в нижнем регистре)                                               |
+| `GHCR_TOKEN`         | PAT с `read:packages` (classic или fine-grained, permission **Packages: Read**)               |
+| `SSH_PORT`           | `22` — опционально, если SSH не на стандартном порту                                          |
+| `TELEGRAM_BOT_TOKEN` | опционально — уведомления CI/CD                                                               |
+| `TELEGRAM_CHAT_ID`   | опционально — куда слать уведомления                                                          |
 
 
 `GITHUB_TOKEN` для push в GHCR выдаётся самим Actions — отдельный секрет не нужен.
