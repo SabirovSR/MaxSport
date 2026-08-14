@@ -1,9 +1,17 @@
-name: ci
+name: CI/CD
 
 on:
-  pull_request:
   push:
     branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   check:
@@ -18,3 +26,257 @@ jobs:
       - run: npm run check
       - run: npm run build -w @maxsport/mini-app
       - run: npm run build -w @maxsport/api
+
+  build-and-push:
+    needs: [check]
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase image owner
+        id: meta
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${OWNER}/maxsport"
+          echo "owner=${OWNER}" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:latest
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
+          cache-from: |
+            type=gha,scope=maxsport
+            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=maxsport
+            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache,mode=max
+
+  deploy:
+    needs: [build-and-push]
+    if: >
+      always() &&
+      needs.build-and-push.result == 'success' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+       github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          envs: GHCR_USER,GHCR_TOKEN,GITHUB_SHA
+          script: |
+            set -euo pipefail
+            APP_DIR="/opt/maxsport"
+            IMAGE_TAG="sha-${GITHUB_SHA}"
+
+            echo "==> Checking runtime files in ${APP_DIR}"
+            if [ ! -d "$APP_DIR" ]; then
+              echo "ERROR: ${APP_DIR} does not exist. Create it and scp .env, docker-compose.yml, Caddyfile."
+              exit 1
+            fi
+            cd "$APP_DIR"
+
+            for f in .env docker-compose.yml Caddyfile; do
+              if [ ! -f "$f" ]; then
+                echo "ERROR: missing ${APP_DIR}/${f}"
+                exit 1
+              fi
+              echo "OK: found $f"
+            done
+
+            if [ -z "${GHCR_USER:-}" ] || [ -z "${GHCR_TOKEN:-}" ]; then
+              echo "ERROR: GHCR_USER / GHCR_TOKEN not passed to SSH session."
+              exit 1
+            fi
+
+            echo "==> docker login ghcr.io as ${GHCR_USER}"
+            echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
+
+            echo "==> pull image tag ${IMAGE_TAG}"
+            export IMAGE_TAG
+            docker compose pull
+
+            echo "==> docker compose up -d"
+            docker compose up -d
+
+            echo "==> docker compose ps"
+            docker compose ps
+
+            echo "==> healthcheck"
+            sleep 5
+            if curl -fsS https://max-sport.sabirov.tech/healthz; then
+              echo
+              echo "OK: https healthz"
+            elif wget -qO- http://127.0.0.1:3000/healthz 2>/dev/null; then
+              echo
+              echo "OK: local health (HTTPS may still be provisioning)"
+            else
+              echo "ERROR: healthcheck failed"
+              docker compose logs --tail=80 api || true
+              exit 1
+            fi
+
+            docker logout ghcr.io || true
+            echo "==> deploy finished (${IMAGE_TAG})"
+        env:
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
+
+  notify:
+    needs: [check, build-and-push, deploy]
+    if: >
+      always() &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve notify payload
+        id: meta
+        env:
+          CHECK_RESULT: ${{ needs.check.result }}
+          BUILD_RESULT: ${{ needs.build-and-push.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          HEAD_MESSAGE: ${{ github.event.head_commit.message }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+          REPO: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          FAILED_JOBS=""
+          TITLE=""
+          STATUS="failure"
+          SHOULD_SEND="false"
+
+          append_failed() {
+            local name=$1
+            if [[ -z "$FAILED_JOBS" ]]; then
+              FAILED_JOBS="$name"
+            else
+              FAILED_JOBS="${FAILED_JOBS},${name}"
+            fi
+          }
+
+          if [[ "$CHECK_RESULT" == "failure" ]]; then
+            append_failed "check"
+          fi
+          if [[ "$BUILD_RESULT" == "failure" ]]; then
+            append_failed "build-and-push"
+          fi
+
+          if [[ -n "$FAILED_JOBS" ]]; then
+            SHOULD_SEND="true"
+            STATUS="failure"
+            case "$FAILED_JOBS" in
+              check)
+                TITLE="🩸 MAX Sport: проверки не прошли · CI"
+                ;;
+              build-and-push)
+                TITLE="🩸 MAX Sport: сборка Docker не удалась · push в GHCR"
+                ;;
+              *)
+                TITLE="🩸 MAX Sport: CI не прошёл · ${FAILED_JOBS}"
+                ;;
+            esac
+          elif [[ "$DEPLOY_RESULT" == "failure" ]]; then
+            SHOULD_SEND="true"
+            STATUS="failure"
+            FAILED_JOBS="deploy"
+            TITLE="🩸 MAX Sport: деплой не удался · prod"
+          elif [[ "$DEPLOY_RESULT" == "success" ]]; then
+            SHOULD_SEND="true"
+            STATUS="success"
+            TITLE="✅ MAX Sport: деплой успешен · prod"
+          else
+            SHOULD_SEND="false"
+          fi
+
+          SUBJECT=""
+          BODY=""
+          if [[ -n "$HEAD_MESSAGE" ]]; then
+            SUBJECT=$(printf '%s\n' "$HEAD_MESSAGE" | head -n 1)
+            BODY=$(printf '%s\n' "$HEAD_MESSAGE" | tail -n +2)
+          else
+            SUBJECT=$(git log -1 --pretty=%s "$SHA" 2>/dev/null || true)
+            BODY=$(git log -1 --pretty=%b "$SHA" 2>/dev/null || true)
+          fi
+
+          COMPARE_URL=""
+          if [[ -n "$EVENT_BEFORE" && "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]]; then
+            COMPARE_URL="${SERVER_URL}/${REPO}/compare/${EVENT_BEFORE}...${SHA}"
+          else
+            COMPARE_URL="${SERVER_URL}/${REPO}/commit/${SHA}"
+          fi
+
+          {
+            echo "should_send=${SHOULD_SEND}"
+            echo "status=${STATUS}"
+            echo "title=${TITLE}"
+            echo "failed_jobs=${FAILED_JOBS}"
+            echo "subject<<EOF"
+            printf '%s\n' "$SUBJECT"
+            echo "EOF"
+            echo "body<<EOF"
+            printf '%s\n' "$BODY"
+            echo "EOF"
+            echo "compare_url=${COMPARE_URL}"
+            echo "run_url=${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Send Telegram notification
+        if: steps.meta.outputs.should_send == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS: ${{ steps.meta.outputs.status }}
+          TITLE: ${{ steps.meta.outputs.title }}
+          FAILED_JOBS: ${{ steps.meta.outputs.failed_jobs }}
+          COMMIT_SUBJECT: ${{ steps.meta.outputs.subject }}
+          COMMIT_BODY: ${{ steps.meta.outputs.body }}
+          COMPARE_URL: ${{ steps.meta.outputs.compare_url }}
+          RUN_URL: ${{ steps.meta.outputs.run_url }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+          SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: bash .github/scripts/telegram-notify.sh
