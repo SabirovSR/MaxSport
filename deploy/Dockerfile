@@ -21,6 +21,7 @@ WORKDIR /app
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates wget \
+  && update-ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json* ./
@@ -33,6 +34,7 @@ COPY deploy/seeds ./deploy/seeds
 COPY --from=prod-deps /app/node_modules ./node_modules
 
 ENV NODE_ENV=production
+ENV NODE_OPTIONS=--use-system-ca
 ENV PORT=3000
 EXPOSE 3000
 

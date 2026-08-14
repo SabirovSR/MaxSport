@@ -112,8 +112,22 @@ export async function registerWebhookSubscription(deps: {
   webhookSecret: string;
 }) {
   if (!deps.webhookSecret) return;
-  await deps.maxApi.subscribeWebhook(
-    `${deps.publicUrl}/webhook`,
-    deps.webhookSecret
-  );
+
+  const url = `${deps.publicUrl}/webhook`;
+  const retryDelaysMs = [0, 2_000, 5_000];
+  let lastError: unknown;
+
+  for (const delayMs of retryDelaysMs) {
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    try {
+      await deps.maxApi.subscribeWebhook(url, deps.webhookSecret);
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }

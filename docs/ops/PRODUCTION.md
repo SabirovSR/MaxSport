@@ -159,7 +159,10 @@ IPv6: либо настроить AAAA и слушать 443, либо явно 
   - `DEPLOY_KNOWN_HOSTS` — строка `ssh-keyscan` / известный host key. **Не** `StrictHostKeyChecking=no`.
   - `GHCR_PULL_TOKEN` — fine-grained или classic PAT с `read:packages` (или `GITHUB_TOKEN` не подойдёт на чужой машине после job). Логин на VPS в том же шаге: `echo token | docker login ghcr.io -u <user> --password-stdin`. Не оставлять токен в `~/.docker/config.json` с правами на запись всем; `600`.
 - По SSH: `cd /opt/maxsport && IMAGE_TAG=... docker compose pull && docker compose up -d`.
-- После up: `curl -fsS https://max-sport.sabirov.tech/healthz` (когда сервис уже есть). Пока приложения нет — шаг появится вместе с кодом.
+- После up (с хоста):
+  - `docker compose exec api wget -qO- http://127.0.0.1:3000/healthz` — api внутри сети compose
+  - `curl -fsS https://max-sport.sabirov.tech/healthz` — HTTPS; после рестарта Caddy может занять 30–60 с
+  - `docker compose logs api | grep -i webhook` — ожидается `Webhook subscription registered`
 
 Environment GitHub `production`: опционально required reviewer. Для хакатона можно без, но секреты всё равно только в Environment/Repository secrets, не в логах.
 
