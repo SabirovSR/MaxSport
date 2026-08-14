@@ -1,0 +1,25 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: maxsport:local
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://maxsport:${POSTGRES_PASSWORD:-maxsport}@postgres:5432/maxsport
+      REDIS_URL: redis://redis:6379
+      PUBLIC_URL: http://localhost:3000
+      PORT: "3000"
+      RUN_MIGRATIONS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maxsport}

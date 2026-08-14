@@ -69,7 +69,7 @@ sudo swapon /swapfile
 - `MaxAuthTries 3`
 - `X11Forwarding no`
 
-Клиент (ноутбук):
+Клиент:
 
 ```
 Host maxsport
@@ -81,7 +81,7 @@ Host maxsport
 
 `fail2ban` jail `sshd` включён.
 
-Отдельный ключ **только для Actions** (`deploy_gha`): в `~deploy/.ssh/authorized_keys` вторая строка. Личный ключ с ноутбука в секреты GitHub не кладём.
+Отдельный ключ **только для Actions** (`deploy_gha`): в `~deploy/.ssh/authorized_keys` вторая строка. Личный ключ локальный в секреты GitHub не кладём.
 
 Проверка после hardening: новый SSH-сеанс **до** закрытия старого. Иначе можно выкинуть себя с машины.
 
@@ -154,7 +154,7 @@ IPv6: либо настроить AAAA и слушать 443, либо явно 
 
 - `permissions`: `contents: read` (без `packages: write`).
 - Секреты:
-  - `DEPLOY_SSH_KEY` — приватный ключ `deploy_gha`, не личный ноутбучный.
+  - `DEPLOY_SSH_KEY` — приватный ключ `deploy_gha`, не личный локальный.
   - `DEPLOY_HOST` — `135.106.186.253` (или DNS, если SSH по имени стабилен).
   - `DEPLOY_KNOWN_HOSTS` — строка `ssh-keyscan` / известный host key. **Не** `StrictHostKeyChecking=no`.
   - `GHCR_PULL_TOKEN` — fine-grained или classic PAT с `read:packages` (или `GITHUB_TOKEN` не подойдёт на чужой машине после job). Логин на VPS в том же шаге: `echo token | docker login ghcr.io -u <user> --password-stdin`. Не оставлять токен в `~/.docker/config.json` с правами на запись всем; `600`.
@@ -212,7 +212,7 @@ GitHub Secrets для пайплайна — §8. Токен бота в Actions
 
 ## 12. Чеклист приёмки машины (до приложения)
 
-- [ ] SSH с ноутбука ключом `max_sport_selectel`, root по паролю нельзя.
+- [ ] SSH с локальным ключом `max_sport_selectel`, root по паролю нельзя.
 - [ ] Второй сеанс SSH после правок sshd.
 - [ ] `ufw status`: только 22/80/443.
 - [ ] Снаружи nmap/проверка: 5432 и 6379 закрыты.

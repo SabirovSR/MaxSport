@@ -1,0 +1,17 @@
+{
+  "name": "@maxsport/max-channel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./auth": "./auth.ts"
+  },
+  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "dependencies": {
+    "@maxhub/max-bot-api": "^0.2.5",
+    "@maxsport/shared": "*"
+  }
+}

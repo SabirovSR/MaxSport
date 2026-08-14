@@ -1,0 +1,11 @@
+{
+  "name": "@maxsport/realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": { ".": "./index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "dependencies": { "ioredis": "^5.4.2" }
+}
