@@ -13,6 +13,10 @@ max-sport.sabirov.tech {
     reverse_proxy api:3000
   }
 
+  handle /app {
+    reverse_proxy api:3000
+  }
+
   handle /app/* {
     reverse_proxy api:3000
   }

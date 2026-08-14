@@ -70,6 +70,13 @@ async function main() {
     decorateReply: false,
   });
 
+  app.get("/app", async (request, reply) => {
+    const qs = request.url.includes("?")
+      ? request.url.slice(request.url.indexOf("?"))
+      : "";
+    return reply.redirect(`/app/${qs}`, 308);
+  });
+
   app.get("/healthz", async () => ({ ok: true, service: "maxsport-api" }));
 
   app.get("/", async (_request, reply) => {
@@ -130,6 +137,17 @@ async function main() {
     karma,
     realtime,
     publicUrl,
+  });
+
+  app.setNotFoundHandler((request, reply) => {
+    const path = (request.url.split("?")[0] ?? "").replace(/\/$/, "") || "/";
+    if (
+      path === "/app" ||
+      (path.startsWith("/app/") && !path.startsWith("/app/assets/"))
+    ) {
+      return reply.sendFile("index.html", staticRoot);
+    }
+    return reply.code(404).send({ error: "Not Found" });
   });
 
   await app.listen({ port, host: "0.0.0.0" });

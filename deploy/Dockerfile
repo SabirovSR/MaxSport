@@ -21,8 +21,11 @@ WORKDIR /app
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates wget \
-  && update-ca-certificates \
   && rm -rf /var/lib/apt/lists/*
+
+COPY deploy/certs/russian_trusted_root_ca.crt /usr/local/share/ca-certificates/
+COPY deploy/certs/russian_trusted_sub_ca.crt /usr/local/share/ca-certificates/
+RUN update-ca-certificates
 
 COPY package.json package-lock.json* ./
 COPY apps/api/package.json ./apps/api/
