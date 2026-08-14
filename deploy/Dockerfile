@@ -8,7 +8,7 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/mini-app/package.json ./apps/mini-app/
 COPY packages ./packages
 
-RUN npm install --omit=dev=false
+RUN npm ci
 COPY . .
 RUN npm run build
 
