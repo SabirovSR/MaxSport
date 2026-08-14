@@ -140,7 +140,12 @@ jobs:
             docker compose pull
 
             echo "==> docker compose up -d"
-            docker compose up -d
+            docker compose up -d || {
+              echo "==> compose up failed, api logs:"
+              docker compose logs --tail=120 api || true
+              docker compose ps -a
+              exit 1
+            }
 
             echo "==> docker compose ps"
             docker compose ps
@@ -155,7 +160,8 @@ jobs:
               echo "OK: local health (HTTPS may still be provisioning)"
             else
               echo "ERROR: healthcheck failed"
-              docker compose logs --tail=80 api || true
+              docker compose logs --tail=120 api || true
+              docker compose ps -a
               exit 1
             fi
 

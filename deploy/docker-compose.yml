@@ -23,6 +23,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      RUN_MIGRATIONS: "true"
     expose:
       - "3000"
     depends_on:

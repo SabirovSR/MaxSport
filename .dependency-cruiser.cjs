@@ -53,7 +53,8 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: "node_modules" },
-    tsConfig: { fileName: "tsconfig.json" },
+    exclude: { path: "(^|/)dist($|/)" },
+    tsConfig: { fileName: "tsconfig.depcruise.json" },
     enhancedResolveOptions: {
       extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
     },

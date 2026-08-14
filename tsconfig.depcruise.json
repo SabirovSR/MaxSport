@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@maxsport/shared": ["./packages/shared/index.ts"],
+      "@maxsport/venue": ["./packages/venue/index.ts"],
+      "@maxsport/lobby": ["./packages/lobby/index.ts"],
+      "@maxsport/max-channel": ["./packages/max-channel/index.ts"],
+      "@maxsport/max-channel/auth": ["./packages/max-channel/auth.ts"],
+      "@maxsport/chat-card": ["./packages/chat-card/index.ts"],
+      "@maxsport/presence": ["./packages/presence/index.ts"],
+      "@maxsport/payment": ["./packages/payment/index.ts"],
+      "@maxsport/karma": ["./packages/karma/index.ts"],
+      "@maxsport/notifications": ["./packages/notifications/index.ts"],
+      "@maxsport/realtime": ["./packages/realtime/index.ts"]
+    }
+  }
+}
