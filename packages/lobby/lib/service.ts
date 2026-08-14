@@ -37,9 +37,15 @@ export interface ListLobbiesFilter {
   sport?: Sport;
   gameLevel?: GameLevel;
   hotOnly?: boolean;
+  /** Supplying both turns on distance calculation and distance ordering. */
   userLat?: number;
   userLng?: number;
+  /** Only meaningful alongside a position. Omit to measure without filtering. */
+  radiusM?: number;
 }
+
+/** Matches the "рядом" chip in the Mini App feed. */
+export const DEFAULT_NEARBY_RADIUS_M = 5000;
 
 export interface LobbyService {
   create(input: CreateLobbyInput): Promise<LobbyWithDetails>;
@@ -273,15 +279,45 @@ export function createLobbyService(
         );
       }
 
+      const { userLat, userLng } = filter;
+      let distanceSelect = "NULL::float8 AS distance_m";
+      let orderBy = "l.start_at ASC";
+
+      if (
+        typeof userLat === "number" &&
+        Number.isFinite(userLat) &&
+        typeof userLng === "number" &&
+        Number.isFinite(userLng)
+      ) {
+        // ST_MakePoint takes (x, y), so longitude comes first.
+        params.push(userLng, userLat);
+        const origin = `ST_SetSRID(ST_MakePoint($${params.length - 1}, $${params.length}), 4326)::geography`;
+        distanceSelect = `ST_Distance(v.location, ${origin}) AS distance_m`;
+        orderBy = "distance_m ASC, l.start_at ASC";
+
+        if (filter.radiusM != null) {
+          params.push(filter.radiusM);
+          conditions.push(`ST_DWithin(v.location, ${origin}, $${params.length})`);
+        }
+      }
+
       const result = await pool.query(
-        `SELECT l.id FROM lobbies l
+        `SELECT l.id, ${distanceSelect}
+         FROM lobbies l
+         JOIN venues v ON v.id = l.venue_id
          WHERE ${conditions.join(" AND ")}
-         ORDER BY l.start_at ASC
+         ORDER BY ${orderBy}
          LIMIT 50`,
         params
       );
 
-      return Promise.all(result.rows.map((r) => loadDetails(pool, r.id as string)));
+      return Promise.all(
+        result.rows.map(async (row) => {
+          const details = await loadDetails(pool, row.id as string);
+          if (row.distance_m == null) return details;
+          return { ...details, distanceM: Math.round(Number(row.distance_m)) };
+        })
+      );
     },
 
     async bookSlot(lobbyId, slotId, userId) {

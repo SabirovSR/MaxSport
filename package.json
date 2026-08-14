@@ -3,10 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:packages": "npm run build -w @maxsport/shared && npm run build -w @maxsport/venue && npm run build -w @maxsport/realtime && npm run build -w @maxsport/max-channel && npm run build -w @maxsport/lobby && npm run build -w @maxsport/presence && npm run build -w @maxsport/payment && npm run build -w @maxsport/karma && npm run build -w @maxsport/notifications && npm run build -w @maxsport/chat-card",
-    "build": "npm run build:packages && npm run build -w @maxsport/api && npm run build -w @maxsport/mini-app",
+    "build:packages": "npm run build -w @maxsport/brand && npm run build -w @maxsport/shared && npm run build -w @maxsport/geo && npm run build -w @maxsport/venue && npm run build -w @maxsport/realtime && npm run build -w @maxsport/max-channel && npm run build -w @maxsport/lobby && npm run build -w @maxsport/presence && npm run build -w @maxsport/payment && npm run build -w @maxsport/karma && npm run build -w @maxsport/notifications && npm run build -w @maxsport/chat-card",
+    "build": "npm run build:packages && npm run build -w @maxsport/api && npm run build -w @maxsport/mini-app && npm run build -w @maxsport/landing",
     "dev": "npm run build:packages && npm run dev -w @maxsport/api",
     "dev:app": "npm run dev -w @maxsport/mini-app",
+    "dev:landing": "npm run dev -w @maxsport/landing",
     "migrate": "npm run migrate -w @maxsport/api",
     "seed:demo": "npm run seed:demo -w @maxsport/api",
     "docker:dev": "docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.dev.yml up --build",

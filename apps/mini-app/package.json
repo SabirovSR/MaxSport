@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@maxhub/max-ui": "^0.2.1",
+    "@maxsport/brand": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.5"
@@ -19,6 +20,7 @@
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "@yandex/ymaps3-types": "^1.0.20315584",
     "vite": "^6.0.11"
   }
 }

@@ -13,7 +13,9 @@
       "@maxsport/payment": ["./packages/payment/index.ts"],
       "@maxsport/karma": ["./packages/karma/index.ts"],
       "@maxsport/notifications": ["./packages/notifications/index.ts"],
-      "@maxsport/realtime": ["./packages/realtime/index.ts"]
+      "@maxsport/realtime": ["./packages/realtime/index.ts"],
+      "@maxsport/geo": ["./packages/geo/index.ts"],
+      "@maxsport/brand": ["./packages/brand/index.ts"]
     }
   }
 }

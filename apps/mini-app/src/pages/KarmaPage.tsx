@@ -1,72 +1,163 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { Button } from "@maxhub/max-ui";
-import { api } from "../api";
+import { api, type Lobby, type RosterEntry } from "../api";
+import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
+import { useMe } from "../lib/useMe";
+import { initialsOf } from "../lib/format";
 
-const TAGS = ["отличный командный", "крутой пас", "пушечный удар"];
+const TAGS_BY_SPORT: Record<string, string[]> = {
+  volleyball: ["отличный командный", "крутой пас", "пушечный удар"],
+  mini_football: ["надёжный вратарь", "точный пас", "быстрый форвард"],
+  basketball: ["точный бросок", "жёсткая защита", "отличный пас"],
+  padel_tennis: ["сильная подача", "точный удар", "хорошая игра у сетки"],
+};
+
+const RELIABILITY = [
+  { value: "on_time", label: "Пришёл вовремя" },
+  { value: "late", label: "Опоздал" },
+  { value: "no_show", label: "Не пришёл" },
+] as const;
+
+type Reliability = (typeof RELIABILITY)[number]["value"];
+
+/** Presence already knows who showed up, so the vote starts pre-filled. */
+function suggestedReliability(status: string): Reliability {
+  if (status === "on_site") return "on_time";
+  if (status === "no_show" || status === "cancelled") return "no_show";
+  return "late";
+}
 
 export function KarmaPage() {
   const { id } = useParams<{ id: string }>();
-  const [targetId, setTargetId] = useState("");
-  const [reliability, setReliability] = useState<"on_time" | "late" | "no_show">("on_time");
-  const [tag, setTag] = useState(TAGS[0]);
-  const [done, setDone] = useState(false);
+  const { userId } = useMe();
+  const [roster, setRoster] = useState<RosterEntry[] | null>(null);
+  const [lobby, setLobby] = useState<Lobby | null>(null);
+  const [voted, setVoted] = useState<Record<string, true>>({});
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit() {
-    if (!id || !targetId) {
-      setError("Укажите ID игрока");
-      return;
-    }
+  const load = useCallback(() => {
+    if (!id) return;
+    setError(null);
+    Promise.all([api.getRoster(id), api.getLobby(id)])
+      .then(([rosterData, lobbyData]) => {
+        setRoster(rosterData.roster);
+        setLobby(lobbyData.lobby);
+      })
+      .catch((cause: Error) => setError(cause.message));
+  }, [id]);
+
+  useEffect(load, [load]);
+
+  async function vote(entry: RosterEntry, reliability: Reliability, tag?: string) {
+    if (!id) return;
+    setBusy(entry.userId);
+    setError(null);
     try {
-      await api.submitKarma({ targetId, lobbyId: id, reliability, tag });
-      setDone(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка");
+      await api.submitKarma({
+        targetId: entry.userId,
+        lobbyId: id,
+        reliability,
+        tag,
+      });
+      setVoted((current) => ({ ...current, [entry.userId]: true }));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Не удалось отправить");
+    } finally {
+      setBusy(null);
     }
   }
 
-  if (done) {
+  if (error && !roster) return <ErrorState message={error} onRetry={load} />;
+  if (!roster) return <LineSkeleton count={5} />;
+
+  const tags = TAGS_BY_SPORT[lobby?.sport ?? "volleyball"] ?? [];
+  // Нет самоголосованию: PRODUCT §4.7.
+  const others = roster.filter((entry) => entry.userId !== userId);
+  const remaining = others.filter((entry) => !voted[entry.userId]);
+
+  if (others.length === 0) {
     return (
-      <>
-        <h2>Спасибо!</h2>
-        <p>Карма обновлена. Бейдж «Спасатель матча» начисляется автоматически.</p>
-      </>
+      <EmptyState title="Оценивать некого">
+        <Link to="/passport">
+          <Button>В Игровой паспорт</Button>
+        </Link>
+      </EmptyState>
+    );
+  }
+
+  if (remaining.length === 0) {
+    return (
+      <EmptyState title="Спасибо, Карма обновлена">
+        <p>Бейдж «Спасатель матча» начисляется автоматически.</p>
+        <Link to="/passport">
+          <Button>В Игровой паспорт</Button>
+        </Link>
+      </EmptyState>
     );
   }
 
   return (
     <>
-      <h2>Карма — 10 секунд</h2>
-      <div className="form-group">
-        <label>ID игрока (target)</label>
-        <input value={targetId} onChange={(e) => setTargetId(e.target.value)} />
-      </div>
-      <div className="form-group">
-        <label>Надёжность</label>
-        <select
-          value={reliability}
-          onChange={(e) => setReliability(e.target.value as typeof reliability)}
-        >
-          <option value="on_time">Пришёл вовремя</option>
-          <option value="late">Опоздал</option>
-          <option value="no_show">Не пришёл</option>
-        </select>
-      </div>
-      <div className="form-group">
-        <label>Спортивный тег</label>
-        <select value={tag} onChange={(e) => setTag(e.target.value)}>
-          {TAGS.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
-      {error && <p style={{ color: "#f87171" }}>{error}</p>}
-      <Button variant="primary" stretched onClick={submit}>
-        Отправить
-      </Button>
+      <h2 className="section-title">Как сыграли?</h2>
+      <p className="muted" style={{ marginTop: 0 }}>
+        Осталось оценить: {remaining.length}. Надёжность подставлена из Явки.
+      </p>
+
+      {remaining.map((entry) => (
+        <div key={entry.userId} className="lobby-card">
+          <div style={{ display: "flex", gap: "var(--ms-space-3)", alignItems: "center" }}>
+            <span className="avatar">
+              {initialsOf(entry.firstName, entry.lastName)}
+            </span>
+            <div>
+              <strong>
+                {entry.firstName} {entry.lastName ?? ""}
+              </strong>
+              <div className="muted">{entry.roleRequired ?? "Любое амплуа"}</div>
+            </div>
+          </div>
+
+          <div className="chips" style={{ marginTop: "var(--ms-space-3)" }}>
+            {RELIABILITY.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className="chip"
+                aria-pressed={suggestedReliability(entry.status) === option.value}
+                disabled={busy === entry.userId}
+                onClick={() => vote(entry, option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          {tags.length > 0 && (
+            <>
+              <p className="form-hint">Отметить за игру:</p>
+              <div className="chips" style={{ marginBottom: 0 }}>
+                {tags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className="chip"
+                    disabled={busy === entry.userId}
+                    onClick={() =>
+                      vote(entry, suggestedReliability(entry.status), tag)
+                    }
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ))}
+
+      {error && <p className="form-error">{error}</p>}
     </>
   );
 }

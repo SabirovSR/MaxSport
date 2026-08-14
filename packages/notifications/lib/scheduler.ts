@@ -192,7 +192,12 @@ export function createNotificationScheduler(
     start() {
       if (timer) return;
       timer = setInterval(() => {
-        void processDueJobs();
+        // A rejection here used to surface as an unhandled rejection, which
+        // takes the whole API process down. The tick runs again in 30s, so a
+        // transient database or MAX API failure should just be logged.
+        processDueJobs().catch((error) => {
+          console.error("Notification tick failed", error);
+        });
       }, 30_000);
     },
     stop() {

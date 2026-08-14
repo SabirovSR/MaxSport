@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json* pnpm-lock.yaml* ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/mini-app/package.json ./apps/mini-app/
+COPY apps/landing/package.json ./apps/landing/
 COPY packages ./packages
 
 RUN npm ci
@@ -32,6 +33,7 @@ COPY apps/api/package.json ./apps/api/
 COPY --from=build /app/packages ./packages
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/mini-app/dist ./apps/mini-app/dist
+COPY --from=build /app/apps/landing/dist ./apps/landing/dist
 COPY deploy/migrations ./deploy/migrations
 COPY deploy/seeds ./deploy/seeds
 COPY --from=prod-deps /app/node_modules ./node_modules

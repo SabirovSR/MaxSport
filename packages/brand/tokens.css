@@ -1,0 +1,220 @@
+/*
+ * MAX Sport design tokens.
+ * Palette anchors come from docs/REGISTRATION.md: charcoal #1A1A1A, court-lime
+ * #C8F54A, white, fog gray.
+ *
+ * Two tiers: raw palette (--ms-ink-*, --ms-lime-*) is theme-independent,
+ * semantic tokens (--ms-surface-*, --ms-text-*, --ms-accent-*) flip with theme.
+ * Always consume the semantic tier; reach for the raw tier only when defining
+ * a new semantic token.
+ *
+ * Dark is the default and the landing never overrides it. The Mini App sets
+ * [data-ms-theme] from the MAX Bridge colour scheme.
+ */
+
+:root {
+  /* ---- Raw palette: neutrals ---------------------------------------- */
+  --ms-ink-950: #0e0e0e;
+  --ms-ink-900: #1a1a1a;
+  --ms-ink-850: #202020;
+  --ms-ink-800: #262626;
+  --ms-ink-700: #333333;
+  --ms-ink-600: #474747;
+  --ms-ink-500: #6b6b6b;
+  --ms-ink-400: #8a8a8a;
+  --ms-ink-300: #b0b0b0;
+  --ms-ink-200: #d4d4d4;
+  --ms-ink-100: #ebebeb;
+  --ms-ink-50: #f7f7f7;
+  --ms-ink-0: #fafafa;
+
+  /* ---- Raw palette: court-lime, the single accent ------------------- */
+  --ms-lime-300: #defa8f;
+  --ms-lime-400: #d3f76c;
+  --ms-lime-500: #c8f54a;
+  --ms-lime-600: #a9dc22;
+  --ms-lime-700: #7fa818;
+  --ms-lime-800: #4f6b12;
+
+  /* ---- Raw palette: presence semantics ------------------------------ *
+   * These exist only to express Явка status and validation state. Never
+   * use them as decoration; the page has exactly one accent. */
+  --ms-signal-transit: #6fc3e8;
+  --ms-signal-hot: #e5a44b;
+  --ms-signal-danger: #e2685f;
+
+  /* ---- Semantic: surfaces (dark) ------------------------------------ */
+  --ms-surface-sunken: var(--ms-ink-950);
+  --ms-surface-base: var(--ms-ink-900);
+  --ms-surface-raised: var(--ms-ink-850);
+  --ms-surface-overlay: var(--ms-ink-800);
+
+  /* ---- Semantic: text (dark) ---------------------------------------- */
+  --ms-text-primary: var(--ms-ink-0);
+  --ms-text-secondary: var(--ms-ink-300);
+  --ms-text-muted: var(--ms-ink-400);
+  --ms-text-inverted: var(--ms-ink-900);
+
+  /* ---- Semantic: accent --------------------------------------------- *
+   * --ms-accent-on is the only legal text colour on an --ms-accent fill.
+   * The pair holds at 13.7:1 in both themes, which is what keeps every CTA
+   * past the contrast check. --ms-accent-text is for lime type on a plain
+   * surface, where the fill colour itself would be unreadable. */
+  --ms-accent: var(--ms-lime-500);
+  --ms-accent-hover: var(--ms-lime-400);
+  --ms-accent-pressed: var(--ms-lime-600);
+  --ms-accent-on: var(--ms-ink-900);
+  --ms-accent-text: var(--ms-lime-500);
+  --ms-accent-soft: rgb(200 245 74 / 0.12);
+  --ms-accent-line: rgb(200 245 74 / 0.32);
+
+  /* ---- Semantic: borders -------------------------------------------- */
+  --ms-border-subtle: rgb(255 255 255 / 0.08);
+  --ms-border-strong: rgb(255 255 255 / 0.16);
+  --ms-border-accent: var(--ms-accent-line);
+
+  /* ---- Semantic: presence state ------------------------------------- */
+  --ms-state-onsite: var(--ms-lime-500);
+  --ms-state-transit: var(--ms-signal-transit);
+  --ms-state-expected: var(--ms-ink-400);
+  --ms-state-noshow: var(--ms-signal-danger);
+  --ms-state-hot: var(--ms-signal-hot);
+
+  /* ---- Typography ---------------------------------------------------- */
+  --ms-font-sans:
+    "Geist Variable", "Geist", system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+  --ms-font-mono:
+    "Geist Mono Variable", "Geist Mono", ui-monospace, SFMono-Regular, Menlo,
+    monospace;
+
+  --ms-text-display-xl: clamp(2.75rem, 7vw, 5rem);
+  --ms-text-display-lg: clamp(2.25rem, 5.5vw, 3.75rem);
+  --ms-text-display-md: clamp(1.75rem, 4vw, 2.5rem);
+  --ms-text-title: 1.375rem;
+  --ms-text-body-lg: 1.125rem;
+  --ms-text-body: 1rem;
+  --ms-text-caption: 0.875rem;
+  --ms-text-micro: 0.75rem;
+
+  --ms-weight-regular: 400;
+  --ms-weight-medium: 500;
+  --ms-weight-semibold: 600;
+  --ms-weight-bold: 700;
+
+  --ms-tracking-display: -0.03em;
+  --ms-tracking-tight: -0.015em;
+  --ms-tracking-normal: 0;
+  --ms-tracking-wide: 0.02em;
+
+  --ms-leading-display: 1.06;
+  /* Italic display type with a descender (у, g, р) clips at --ms-leading-display. */
+  --ms-leading-display-italic: 1.14;
+  --ms-leading-title: 1.2;
+  --ms-leading-body: 1.65;
+  --ms-measure: 65ch;
+
+  /* ---- Spacing, 4px base --------------------------------------------- */
+  --ms-space-1: 0.25rem;
+  --ms-space-2: 0.5rem;
+  --ms-space-3: 0.75rem;
+  --ms-space-4: 1rem;
+  --ms-space-5: 1.25rem;
+  --ms-space-6: 1.5rem;
+  --ms-space-8: 2rem;
+  --ms-space-10: 2.5rem;
+  --ms-space-12: 3rem;
+  --ms-space-16: 4rem;
+  --ms-space-20: 5rem;
+  --ms-space-24: 6rem;
+  --ms-space-section: clamp(5rem, 12vw, 8rem);
+  --ms-space-section-lg: clamp(7rem, 16vw, 12rem);
+
+  /* ---- Radius --------------------------------------------------------- *
+   * One documented system: buttons and chips are pill, cards are lg,
+   * inputs and slots are md, sheets and hero panels are xl. */
+  --ms-radius-xs: 0.375rem;
+  --ms-radius-sm: 0.625rem;
+  --ms-radius-md: 0.875rem;
+  --ms-radius-lg: 1.125rem;
+  --ms-radius-xl: 1.5rem;
+  --ms-radius-pill: 999px;
+
+  /* ---- Elevation ------------------------------------------------------ *
+   * Tinted to the surface, never pure black. */
+  --ms-shadow-card:
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 32px rgb(8 8 8 / 0.45);
+  --ms-shadow-raised:
+    inset 0 1px 0 rgb(255 255 255 / 0.06), 0 24px 60px rgb(8 8 8 / 0.55);
+  --ms-focus-ring:
+    0 0 0 2px var(--ms-surface-base), 0 0 0 4px var(--ms-accent);
+
+  /* ---- Translucent surfaces ------------------------------------------- */
+  --ms-glass-bg: rgb(26 26 26 / 0.82);
+  --ms-glass-blur: blur(20px) saturate(160%);
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --ms-duration-fast: 150ms;
+  --ms-duration-base: 260ms;
+  --ms-duration-slow: 420ms;
+  --ms-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ms-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---- Layers ---------------------------------------------------------- */
+  --ms-layer-sticky: 100;
+  --ms-layer-nav: 200;
+  --ms-layer-sheet: 300;
+  --ms-layer-modal: 400;
+  --ms-layer-toast: 500;
+  --ms-layer-grain: 600;
+}
+
+[data-ms-theme="light"] {
+  --ms-surface-sunken: var(--ms-ink-100);
+  --ms-surface-base: var(--ms-ink-50);
+  --ms-surface-raised: #ffffff;
+  --ms-surface-overlay: #ffffff;
+
+  --ms-text-primary: var(--ms-ink-900);
+  --ms-text-secondary: var(--ms-ink-600);
+  --ms-text-muted: var(--ms-ink-500);
+  --ms-text-inverted: var(--ms-ink-0);
+
+  /* Lime keeps its fill role, but lime type on a light surface fails AA,
+     so the text alias drops to the 800 step. */
+  --ms-accent-hover: var(--ms-lime-600);
+  --ms-accent-pressed: var(--ms-lime-700);
+  --ms-accent-text: var(--ms-lime-800);
+  --ms-accent-soft: rgb(200 245 74 / 0.24);
+  --ms-accent-line: rgb(127 168 24 / 0.4);
+
+  --ms-border-subtle: rgb(26 26 26 / 0.1);
+  --ms-border-strong: rgb(26 26 26 / 0.2);
+
+  --ms-state-onsite: var(--ms-lime-800);
+  --ms-state-transit: #1d6d92;
+  --ms-state-expected: var(--ms-ink-500);
+  --ms-state-noshow: #a8382f;
+  --ms-state-hot: #8a5a12;
+
+  --ms-shadow-card:
+    inset 0 1px 0 rgb(255 255 255 / 0.9), 0 8px 24px rgb(26 26 26 / 0.08);
+  --ms-shadow-raised:
+    inset 0 1px 0 rgb(255 255 255 / 0.9), 0 20px 48px rgb(26 26 26 / 0.12);
+  --ms-glass-bg: rgb(250 250 250 / 0.82);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ms-duration-fast: 1ms;
+    --ms-duration-base: 1ms;
+    --ms-duration-slow: 1ms;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --ms-glass-bg: var(--ms-surface-base);
+    --ms-glass-blur: none;
+  }
+}

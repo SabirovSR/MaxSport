@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { join, dirname } from "node:path";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createPool } from "@maxsport/shared";
 import { createVenueRepository } from "@maxsport/venue";
@@ -16,6 +17,7 @@ import { createPaymentService } from "@maxsport/payment";
 import { createKarmaService } from "@maxsport/karma";
 import { createNotificationScheduler } from "@maxsport/notifications";
 import { createRealtimeHub } from "@maxsport/realtime";
+import { createGeoService } from "@maxsport/geo";
 import { registerApiRoutes } from "./routes.js";
 import {
   registerWebhookRoutes,
@@ -59,15 +61,22 @@ async function main() {
   const karma = createKarmaService(pool);
   const notifications = createNotificationScheduler(pool, maxApi);
   const realtime = createRealtimeHub(redisUrl);
+  const geo = createGeoService({
+    jsApiKey: process.env.YANDEX_MAPS_JS_API_KEY ?? "",
+    suggestKey: process.env.YANDEX_SUGGEST_API_KEY ?? "",
+    geocoderKey: process.env.YANDEX_GEOCODER_API_KEY ?? "",
+    staticKey: process.env.YANDEX_STATIC_API_KEY ?? "",
+  });
 
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: true });
 
-  const staticRoot = join(__dirname, "../../mini-app/dist");
+  // The Mini App registration owns reply.sendFile, which the SPA fallback at
+  // the bottom of this file depends on.
+  const miniAppRoot = join(__dirname, "../../mini-app/dist");
   await app.register(fastifyStatic, {
-    root: staticRoot,
+    root: miniAppRoot,
     prefix: "/app/",
-    decorateReply: false,
   });
 
   app.get("/app", async (request, reply) => {
@@ -79,43 +88,45 @@ async function main() {
 
   app.get("/healthz", async () => ({ ok: true, service: "maxsport-api" }));
 
-  app.get("/", async (_request, reply) => {
-    return reply.type("text/html").send(`<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>MAX Sport</title>
-  <style>
-    :root { --charcoal:#1A1A1A; --lime:#C8F54A; --white:#fff; }
-    * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family: system-ui, sans-serif; background:var(--charcoal); color:var(--white); min-height:100vh; }
-    main { max-width:720px; margin:0 auto; padding:4rem 1.5rem; }
-    .mark { width:64px; height:64px; border:2px solid var(--white); border-radius:12px; display:grid; grid-template-columns:repeat(3,1fr); gap:4px; padding:8px; margin-bottom:2rem; }
-    .mark span { background:#333; border-radius:4px; }
-    .mark span.on { background:var(--lime); }
-    h1 { font-size:2.5rem; letter-spacing:-0.02em; margin-bottom:0.5rem; }
-    h1 em { font-style:normal; border-bottom:2px solid var(--lime); }
-    p { color:#aaa; line-height:1.6; margin:1rem 0 2rem; max-width:48ch; }
-    a.btn { display:inline-block; background:var(--lime); color:var(--charcoal); text-decoration:none; padding:0.875rem 1.5rem; border-radius:999px; font-weight:600; }
-    .tag { margin-top:3rem; font-size:2rem; color:var(--lime); opacity:0.9; }
-  </style>
-</head>
-<body>
-  <main>
-    <div class="mark"><span class="on"></span><span></span><span></span><span></span><span></span><span></span></div>
-    <h1>MAX <em>Sport</em></h1>
-    <p>Любительский спорт в MAX: слоты с амплуа, живая карточка в чат, сплит аренды и отметка о явке. Собери состав и не сорви игру.</p>
-    <a class="btn" href="https://max.ru/${botUsername}">Открыть в MAX</a>
-    <div class="tag">Fill the slot.</div>
-  </main>
-</body>
-</html>`);
-  });
+  // The landing is a static build with no access to server env, so its primary
+  // call to action points here instead of embedding the bot username. Keeps
+  // the deep link correct without a Docker build argument.
+  app.get("/open", async (_request, reply) =>
+    reply.redirect(`https://max.ru/${botUsername}`, 302)
+  );
+
+  // wildcard:false makes @fastify/static enumerate the build at boot and
+  // register one route per file, plus "/" for index.html. A catch-all at this
+  // prefix would otherwise shadow /api, /app, /webhook and /healthz.
+  const landingRoot = join(__dirname, "../../landing/dist");
+  if (existsSync(join(landingRoot, "index.html"))) {
+    await app.register(fastifyStatic, {
+      root: landingRoot,
+      prefix: "/",
+      decorateReply: false,
+      wildcard: false,
+    });
+  } else {
+    app.log.warn(
+      { landingRoot },
+      "Landing build not found, serving a placeholder at /"
+    );
+    app.get("/", async (_request, reply) =>
+      reply
+        .type("text/html")
+        .send(
+          `<!DOCTYPE html><html lang="ru"><meta charset="utf-8">` +
+            `<title>MAX Sport</title><body style="font-family:system-ui;background:#1a1a1a;color:#fafafa;padding:3rem">` +
+            `<p>Лендинг не собран. Выполните <code>npm run build</code>.</p>` +
+            `<p><a style="color:#c8f54a" href="/app/">Открыть Mini App</a></p>`
+        )
+    );
+  }
 
   await registerApiRoutes(app, {
     pool,
     botToken,
+    botUsername,
     lobbies,
     venues,
     presence,
@@ -124,6 +135,7 @@ async function main() {
     chatCard,
     realtime,
     notifications,
+    geo,
   });
 
   registerWebhookRoutes(app, {
@@ -145,7 +157,7 @@ async function main() {
       path === "/app" ||
       (path.startsWith("/app/") && !path.startsWith("/app/assets/"))
     ) {
-      return reply.sendFile("index.html", staticRoot);
+      return reply.sendFile("index.html", miniAppRoot);
     }
     return reply.code(404).send({ error: "Not Found" });
   });

@@ -4,7 +4,7 @@ import {
   UnauthorizedError,
   type Pool,
 } from "@maxsport/shared";
-import type { LobbyService } from "@maxsport/lobby";
+import { DEFAULT_NEARBY_RADIUS_M, type LobbyService } from "@maxsport/lobby";
 import type { VenueRepository } from "@maxsport/venue";
 import type { PresenceService } from "@maxsport/presence";
 import type { PaymentService } from "@maxsport/payment";
@@ -12,11 +12,13 @@ import type { KarmaService } from "@maxsport/karma";
 import type { ChatCardService } from "@maxsport/chat-card";
 import type { RealtimeHub } from "@maxsport/realtime";
 import type { NotificationScheduler } from "@maxsport/notifications";
+import { YandexGeoError, type GeoService } from "@maxsport/geo";
 import { requireAuth } from "./auth.js";
 
 interface ApiDeps {
   pool: Pool;
   botToken: string;
+  botUsername: string;
   lobbies: LobbyService;
   venues: VenueRepository;
   presence: PresenceService;
@@ -25,9 +27,19 @@ interface ApiDeps {
   chatCard: ChatCardService;
   realtime: RealtimeHub;
   notifications: NotificationScheduler;
+  geo: GeoService;
 }
 
 function handleError(error: unknown) {
+  if (error instanceof YandexGeoError) {
+    // An upstream map failure is not the client's fault, and the Yandex status
+    // must not be forwarded verbatim: a 403 there means our key is bad, which
+    // would read as "you are not authorised" to the caller.
+    return {
+      statusCode: 502,
+      body: { error: "Картографический сервис недоступен", code: "GEO_UPSTREAM" },
+    };
+  }
   if (error instanceof DomainError) {
     return { statusCode: error.code === "UNAUTHORIZED" ? 401 : 400, body: { error: error.message, code: error.code } };
   }
@@ -35,6 +47,12 @@ function handleError(error: unknown) {
     return { statusCode: 401, body: { error: error.message } };
   }
   throw error;
+}
+
+function optionalNumber(value: string | undefined): number | undefined {
+  if (value == null || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 export async function registerApiRoutes(
@@ -48,11 +66,22 @@ export async function registerApiRoutes(
         sport?: string;
         gameLevel?: string;
         hotOnly?: string;
+        lat?: string;
+        lng?: string;
+        nearbyOnly?: string;
+        radiusM?: string;
       };
+      // A position alone only measures distance; "рядом" is what filters.
+      const nearbyOnly = query.nearbyOnly === "true";
       const lobbies = await deps.lobbies.list({
         sport: query.sport as never,
         gameLevel: query.gameLevel as never,
         hotOnly: query.hotOnly === "true",
+        userLat: optionalNumber(query.lat),
+        userLng: optionalNumber(query.lng),
+        radiusM: nearbyOnly
+          ? (optionalNumber(query.radiusM) ?? DEFAULT_NEARBY_RADIUS_M)
+          : undefined,
       });
       return reply.send({ lobbies });
     } catch (error) {
@@ -177,6 +206,22 @@ export async function registerApiRoutes(
       const { id } = request.params as { id: string };
       const lobby = await deps.lobbies.startLobby(id, user.id);
       await deps.presence.markNoShows(id);
+      return reply.send({ lobby });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.post("/api/lobbies/:id/cancel", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id } = request.params as { id: string };
+      const lobby = await deps.lobbies.cancelLobby(id, user.id);
+      // The chat card must lose its join buttons, and anyone watching the
+      // lobby in the Mini App should see the change without a refresh.
+      await deps.chatCard.syncCard(id);
+      await deps.realtime.publishLobbyUpdate(id, lobby);
       return reply.send({ lobby });
     } catch (error) {
       const mapped = handleError(error);
@@ -356,19 +401,147 @@ export async function registerApiRoutes(
     }
   });
 
+  // The JS API key is the only Yandex key that may reach the browser: it is
+  // restricted by HTTP referrer in the Yandex cabinet. Geosuggest, Geocoder
+  // and Static keys are not, so those stay behind the proxy routes below.
+  // Serving the key at runtime also means rotating it needs no image rebuild.
+  app.get("/api/config", async (request, reply) => {
+    try {
+      await requireAuth(request, deps.pool, deps.botToken);
+      return reply.send({
+        yandexMapsApiKey: deps.geo.jsApiKey(),
+        botUsername: deps.botUsername,
+      });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.get("/api/geo/suggest", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const query = request.query as {
+        text?: string;
+        lat?: string;
+        lng?: string;
+      };
+      const lat = optionalNumber(query.lat);
+      const lng = optionalNumber(query.lng);
+      const suggestions = await deps.geo.suggest({
+        text: query.text ?? "",
+        near: lat != null && lng != null ? { lat, lng } : undefined,
+        rateKey: user.id,
+      });
+      return reply.send({ suggestions });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.get("/api/geo/geocode", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const query = request.query as { query?: string; uri?: string };
+      const place = await deps.geo.geocode({
+        query: query.query,
+        uri: query.uri,
+        rateKey: user.id,
+      });
+      return reply.send({ place });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.get("/api/geo/reverse", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const query = request.query as { lat?: string; lng?: string };
+      const lat = optionalNumber(query.lat);
+      const lng = optionalNumber(query.lng);
+      if (lat == null || lng == null) {
+        return reply.status(400).send({ error: "Нужны lat и lng" });
+      }
+      const place = await deps.geo.reverseGeocode({
+        lat,
+        lng,
+        rateKey: user.id,
+      });
+      return reply.send({ place });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.get("/api/geo/static", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const query = request.query as {
+        lat?: string;
+        lng?: string;
+        zoom?: string;
+        width?: string;
+        height?: string;
+      };
+      const lat = optionalNumber(query.lat);
+      const lng = optionalNumber(query.lng);
+      if (lat == null || lng == null) {
+        return reply.status(400).send({ error: "Нужны lat и lng" });
+      }
+
+      const image = await deps.geo.staticMap({
+        lat,
+        lng,
+        zoom: optionalNumber(query.zoom),
+        width: optionalNumber(query.width),
+        height: optionalNumber(query.height),
+        rateKey: user.id,
+      });
+      if (!image) return reply.status(404).send({ error: "Карта недоступна" });
+
+      return reply
+        .type(image.contentType)
+        .header("Cache-Control", "private, max-age=86400")
+        .send(Buffer.from(image.body));
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
   app.get("/api/lobbies/:id/stream", async (request, reply) => {
+    // EventSource cannot set request headers, so the browser passes initData
+    // as a query parameter; requireAuth accepts either. This must resolve
+    // before writeHead, otherwise the error cannot be reported as a status.
+    try {
+      await requireAuth(request, deps.pool, deps.botToken);
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+
     const { id } = request.params as { id: string };
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     });
 
     const unsubscribe = deps.realtime.subscribeLobby(id, (payload) => {
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     });
 
+    // Without traffic the reverse proxy drops an idle stream, which would kill
+    // the live counter mid-demo.
+    const heartbeat = setInterval(() => reply.raw.write(": ping\n\n"), 25_000);
+
     request.raw.on("close", () => {
+      clearInterval(heartbeat);
       unsubscribe();
     });
   });

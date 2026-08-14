@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@maxsport/chat-card": "*",
+    "@maxsport/geo": "*",
     "@maxsport/karma": "*",
     "@maxsport/lobby": "*",
     "@maxsport/max-channel": "*",

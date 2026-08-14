@@ -1,0 +1,58 @@
+@import "tailwindcss";
+@import "@maxsport/brand/tokens.css";
+@import "@maxsport/brand/tailwind.css";
+
+/*
+ * The landing is deliberately dark-locked. docs/REGISTRATION.md defines the
+ * identity as a night amateur match, and a light mode would lose it, so this
+ * page never sets [data-ms-theme]. The Mini App does, and inherits the light
+ * token set from the brand package.
+ */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    background: var(--ms-surface-base);
+    color: var(--ms-text-primary);
+    font-family: var(--ms-font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--ms-accent);
+    color: var(--ms-accent-on);
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--ms-focus-ring);
+    border-radius: var(--ms-radius-xs);
+  }
+}
+
+@layer components {
+  /* Display type carries the italic emphasis word, and a descender in an
+     italic (амплуа, игра) clips against the tighter display leading. */
+  .ms-display {
+    letter-spacing: var(--ms-tracking-display);
+    line-height: var(--ms-leading-display-italic);
+    text-wrap: balance;
+  }
+
+  .ms-measure {
+    max-width: var(--ms-measure);
+    line-height: var(--ms-leading-body);
+  }
+}

@@ -2,6 +2,8 @@ declare global {
   interface Window {
     WebApp?: {
       initData: string;
+      platform?: string;
+      colorScheme?: "light" | "dark";
       initDataUnsafe?: {
         start_param?: string;
         user?: {

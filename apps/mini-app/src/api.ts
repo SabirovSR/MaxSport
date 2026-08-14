@@ -49,6 +49,23 @@ export interface Lobby {
   rentTotal: number;
   depositEnabled: boolean;
   cardMessageId: string | null;
+  /** Present only when the feed request carried the user's position. */
+  distanceM?: number;
+}
+
+export interface GeoSuggestion {
+  title: string;
+  subtitle?: string;
+  address?: string;
+  uri?: string;
+  distanceM?: number;
+}
+
+export interface GeoPlace {
+  name?: string;
+  address: string;
+  lat: number;
+  lng: number;
 }
 
 export interface Venue {
@@ -72,6 +89,14 @@ export interface Passport {
   attendancePct: number;
 }
 
+export interface PaymentHold {
+  slotId: string;
+  userId: string;
+  lobbyId: string;
+  status: string;
+  amount: number;
+}
+
 export interface RosterEntry {
   slotId: string;
   userId: string;
@@ -82,12 +107,70 @@ export interface RosterEntry {
 }
 
 export const api = {
-  listLobbies(params?: { sport?: string; hotOnly?: boolean }) {
+  getConfig() {
+    return apiFetch<{ yandexMapsApiKey: string; botUsername: string }>(
+      "/api/config"
+    );
+  },
+  listLobbies(params?: {
+    sport?: string;
+    hotOnly?: boolean;
+    nearbyOnly?: boolean;
+    lat?: number;
+    lng?: number;
+  }) {
     const search = new URLSearchParams();
     if (params?.sport) search.set("sport", params.sport);
     if (params?.hotOnly) search.set("hotOnly", "true");
+    if (params?.nearbyOnly) search.set("nearbyOnly", "true");
+    if (params?.lat != null) search.set("lat", String(params.lat));
+    if (params?.lng != null) search.set("lng", String(params.lng));
     const q = search.toString();
     return apiFetch<{ lobbies: Lobby[] }>(`/api/lobbies${q ? `?${q}` : ""}`);
+  },
+  suggestPlaces(text: string, near?: { lat: number; lng: number }) {
+    const search = new URLSearchParams({ text });
+    if (near) {
+      search.set("lat", String(near.lat));
+      search.set("lng", String(near.lng));
+    }
+    return apiFetch<{ suggestions: GeoSuggestion[] }>(
+      `/api/geo/suggest?${search.toString()}`
+    );
+  },
+  geocode(input: { query?: string; uri?: string }) {
+    const search = new URLSearchParams();
+    if (input.query) search.set("query", input.query);
+    if (input.uri) search.set("uri", input.uri);
+    return apiFetch<{ place: GeoPlace | null }>(
+      `/api/geo/geocode?${search.toString()}`
+    );
+  },
+  reverseGeocode(lat: number, lng: number) {
+    return apiFetch<{ place: GeoPlace | null }>(
+      `/api/geo/reverse?lat=${lat}&lng=${lng}`
+    );
+  },
+  staticMapUrl(lat: number, lng: number, width = 640, height = 280) {
+    const search = new URLSearchParams({
+      lat: String(lat),
+      lng: String(lng),
+      width: String(width),
+      height: String(height),
+      initData: getInitData(),
+    });
+    return `${API_BASE}/api/geo/static?${search.toString()}`;
+  },
+  listPayments(lobbyId: string) {
+    return apiFetch<{ holds: PaymentHold[] }>(
+      `/api/lobbies/${lobbyId}/payments`
+    );
+  },
+  collectPayments(lobbyId: string) {
+    return apiFetch<{ ok: boolean }>(
+      `/api/lobbies/${lobbyId}/payments/collect`,
+      { method: "POST" }
+    );
   },
   getLobby(id: string) {
     return apiFetch<{ lobby: Lobby }>(`/api/lobbies/${id}`);
@@ -129,10 +212,31 @@ export const api = {
   getRoster(lobbyId: string) {
     return apiFetch<{ roster: RosterEntry[] }>(`/api/lobbies/${lobbyId}/roster`);
   },
-  confirmOnSite(slotId: string) {
+  confirmOnSite(slotId: string, position?: { lat: number; lng: number }) {
     return apiFetch<{ ok: boolean }>(`/api/presence/${slotId}/on-site`, {
       method: "POST",
+      body: position ? JSON.stringify(position) : undefined,
     });
+  },
+  confirmOnTheWay(slotId: string) {
+    return apiFetch<{ ok: boolean }>(`/api/presence/${slotId}/on-the-way`, {
+      method: "POST",
+    });
+  },
+  markPresence(slotId: string, status: string) {
+    return apiFetch<{ ok: boolean }>(`/api/presence/${slotId}/manual`, {
+      method: "POST",
+      body: JSON.stringify({ status }),
+    });
+  },
+  cancelLobby(lobbyId: string) {
+    return apiFetch<{ lobby: Lobby }>(`/api/lobbies/${lobbyId}/cancel`, {
+      method: "POST",
+    });
+  },
+  lobbyStreamUrl(lobbyId: string) {
+    // EventSource cannot set headers, so initData travels in the query string.
+    return `${API_BASE}/api/lobbies/${lobbyId}/stream?initData=${encodeURIComponent(getInitData())}`;
   },
   startLobby(lobbyId: string) {
     return apiFetch<{ lobby: Lobby }>(`/api/lobbies/${lobbyId}/start`, {

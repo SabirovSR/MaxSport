@@ -1,0 +1,99 @@
+/*
+ * Tailwind v4 theme bridge. Import after `tokens.css` so the referenced
+ * custom properties are already defined:
+ *
+ *   @import "tailwindcss";
+ *   @import "@maxsport/brand/tokens.css";
+ *   @import "@maxsport/brand/tailwind.css";
+ *
+ * Only the tokens a utility class should reach are mapped here. Everything
+ * else stays available as a plain var() from tokens.css.
+ */
+
+@theme {
+  --color-ink-950: var(--ms-ink-950);
+  --color-ink-900: var(--ms-ink-900);
+  --color-ink-850: var(--ms-ink-850);
+  --color-ink-800: var(--ms-ink-800);
+  --color-ink-700: var(--ms-ink-700);
+  --color-ink-600: var(--ms-ink-600);
+  --color-ink-500: var(--ms-ink-500);
+  --color-ink-400: var(--ms-ink-400);
+  --color-ink-300: var(--ms-ink-300);
+  --color-ink-200: var(--ms-ink-200);
+  --color-ink-100: var(--ms-ink-100);
+  --color-ink-50: var(--ms-ink-50);
+  --color-ink-0: var(--ms-ink-0);
+
+  --color-lime-300: var(--ms-lime-300);
+  --color-lime-400: var(--ms-lime-400);
+  --color-lime-500: var(--ms-lime-500);
+  --color-lime-600: var(--ms-lime-600);
+  --color-lime-700: var(--ms-lime-700);
+  --color-lime-800: var(--ms-lime-800);
+
+  --color-surface-sunken: var(--ms-surface-sunken);
+  --color-surface-base: var(--ms-surface-base);
+  --color-surface-raised: var(--ms-surface-raised);
+  --color-surface-overlay: var(--ms-surface-overlay);
+
+  --color-content-primary: var(--ms-text-primary);
+  --color-content-secondary: var(--ms-text-secondary);
+  --color-content-muted: var(--ms-text-muted);
+  --color-content-inverted: var(--ms-text-inverted);
+
+  --color-accent: var(--ms-accent);
+  --color-accent-hover: var(--ms-accent-hover);
+  --color-accent-pressed: var(--ms-accent-pressed);
+  --color-accent-on: var(--ms-accent-on);
+  --color-accent-soft: var(--ms-accent-soft);
+  --color-accent-line: var(--ms-accent-line);
+
+  --color-hairline: var(--ms-border-subtle);
+  --color-hairline-strong: var(--ms-border-strong);
+
+  --font-sans: var(--ms-font-sans);
+  --font-mono: var(--ms-font-mono);
+
+  --text-display-xl: var(--ms-text-display-xl);
+  --text-display-xl--line-height: var(--ms-leading-display);
+  --text-display-xl--letter-spacing: var(--ms-tracking-display);
+  --text-display-lg: var(--ms-text-display-lg);
+  --text-display-lg--line-height: var(--ms-leading-display);
+  --text-display-lg--letter-spacing: var(--ms-tracking-display);
+  --text-display-md: var(--ms-text-display-md);
+  --text-display-md--line-height: var(--ms-leading-title);
+  --text-display-md--letter-spacing: var(--ms-tracking-tight);
+  --text-title: var(--ms-text-title);
+  --text-title--line-height: var(--ms-leading-title);
+  --text-body-lg: var(--ms-text-body-lg);
+  --text-body-lg--line-height: var(--ms-leading-body);
+  --text-body: var(--ms-text-body);
+  --text-body--line-height: var(--ms-leading-body);
+  --text-caption: var(--ms-text-caption);
+  --text-micro: var(--ms-text-micro);
+
+  --tracking-display: var(--ms-tracking-display);
+  --tracking-tight: var(--ms-tracking-tight);
+  --tracking-wide: var(--ms-tracking-wide);
+
+  --leading-display: var(--ms-leading-display);
+  --leading-display-italic: var(--ms-leading-display-italic);
+  --leading-body: var(--ms-leading-body);
+
+  --radius-xs: var(--ms-radius-xs);
+  --radius-sm: var(--ms-radius-sm);
+  --radius-md: var(--ms-radius-md);
+  --radius-lg: var(--ms-radius-lg);
+  --radius-xl: var(--ms-radius-xl);
+  --radius-pill: var(--ms-radius-pill);
+
+  --spacing-section: var(--ms-space-section);
+  --spacing-section-lg: var(--ms-space-section-lg);
+
+  --shadow-card: var(--ms-shadow-card);
+  --shadow-raised: var(--ms-shadow-raised);
+
+  --ease-out: var(--ms-ease-out);
+  --ease-in-out: var(--ms-ease-in-out);
+}
