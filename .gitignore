@@ -1,0 +1,43 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Keys
+*.pem
+*.key
+id_rsa
+id_ed25519
+*_gha
+max_sport_selectel
+
+# Node / build
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# Docker volumes
+caddy_data/
+caddy_config/
+postgres_data/
+redis_data/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cursor skills
+.agents/
+skills-lock.json
