@@ -17,6 +17,7 @@ import {
   formatDistance,
   formatMoney,
   formatStartAt,
+  forgetSport,
   pluralSlots,
   readMySports,
   rememberSport,
@@ -77,6 +78,7 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
+  const [mySports, setMySports] = useState(readMySports);
 
   const geo = useGeolocation();
   const position = geo.position;
@@ -86,7 +88,7 @@ export function HomePage() {
     setError(null);
     Promise.all([
       api.listLobbies({
-        sport: mySportsOnly ? undefined : (sport ?? undefined),
+        sport: sport ?? undefined,
         hotOnly,
         nearbyOnly,
         lat: position?.lat,
@@ -100,7 +102,7 @@ export function HomePage() {
       })
       .catch((cause: Error) => setError(cause.message))
       .finally(() => setLoading(false));
-  }, [sport, hotOnly, nearbyOnly, mySportsOnly, position?.lat, position?.lng]);
+  }, [sport, hotOnly, nearbyOnly, position?.lat, position?.lng]);
 
   useEffect(load, [load]);
 
@@ -115,7 +117,6 @@ export function HomePage() {
     if (granted) setNearbyOnly(true);
   };
 
-  const mySports = readMySports();
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return lobbies.filter((lobby) => {
@@ -196,7 +197,11 @@ export function HomePage() {
           type="button"
           className="chip"
           aria-pressed={mySportsOnly}
-          onClick={() => setMySportsOnly((value) => !value)}
+          onClick={() => {
+            const enabling = !mySportsOnly;
+            if (enabling) setSport(null);
+            setMySportsOnly(enabling);
+          }}
         >
           Мои виды спорта
         </button>
@@ -207,8 +212,12 @@ export function HomePage() {
             className="chip"
             aria-pressed={sport === code}
             onClick={() => {
-              rememberSport(code);
-              setSport((value) => (value === code ? null : code));
+              const enabling = sport !== code;
+              if (enabling) rememberSport(code);
+              else forgetSport(code);
+              setMySports(readMySports());
+              setMySportsOnly(false);
+              setSport(enabling ? code : null);
             }}
           >
             {SPORT_LABELS[code]}

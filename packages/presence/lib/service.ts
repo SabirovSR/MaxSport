@@ -13,6 +13,7 @@ export interface RosterEntry {
 
 export interface PresenceService {
   getRoster(lobbyId: string): Promise<RosterEntry[]>;
+  getLobbyIdForSlot(slotId: string): Promise<string | null>;
   confirmOnTheWay(slotId: string, userId: string): Promise<void>;
   confirmOnSite(slotId: string, userId: string): Promise<void>;
   confirmOnSiteWithGeo(
@@ -51,6 +52,8 @@ export function createPresenceService(pool: Pool): PresenceService {
          JOIN users u ON u.id = pr.user_id
          JOIN slots s ON s.id = pr.slot_id
          WHERE pr.lobby_id = $1
+           AND s.user_id = pr.user_id
+           AND pr.status <> 'cancelled'
          ORDER BY s.slot_index`,
         [lobbyId]
       );
@@ -63,6 +66,14 @@ export function createPresenceService(pool: Pool): PresenceService {
         status: row.status as PresenceStatus,
         updatedAt: new Date(row.updated_at as string),
       }));
+    },
+
+    async getLobbyIdForSlot(slotId) {
+      const result = await pool.query(
+        `SELECT lobby_id FROM slots WHERE id = $1`,
+        [slotId]
+      );
+      return (result.rows[0]?.lobby_id as string | undefined) ?? null;
     },
 
     async confirmOnTheWay(slotId, userId) {

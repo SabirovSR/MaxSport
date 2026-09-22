@@ -48,9 +48,7 @@ export async function requireAuth(
   pool: Pool,
   botToken: string
 ): Promise<AuthUser> {
-  const initData =
-    (request.headers["x-init-data"] as string | undefined) ??
-    (request.query as { initData?: string }).initData;
+  const initData = request.headers["x-init-data"] as string | undefined;
 
   if (!initData) throw new UnauthorizedError();
 

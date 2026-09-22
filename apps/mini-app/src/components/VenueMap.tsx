@@ -41,6 +41,77 @@ function MapFrame({
   );
 }
 
+function LoadedVenueMap({
+  api,
+  points,
+  center,
+  zoom,
+  height,
+  onSelect,
+  draggablePoint,
+  onDragEnd,
+  emptyHint,
+}: VenueMapProps & { api: YandexMapApi; zoom: number; height: number }) {
+  const {
+    YMap,
+    YMapDefaultSchemeLayer,
+    YMapDefaultFeaturesLayer,
+    YMapMarker,
+    useDefault,
+  } = api;
+  const anchor =
+    center ??
+    (points[0] ? { lat: points[0].lat, lng: points[0].lng } : undefined) ??
+    (draggablePoint ?? MOSCOW);
+  const location = useDefault({
+    center: [anchor.lng, anchor.lat] as [number, number],
+    zoom,
+  });
+  const theme =
+    document.documentElement.dataset.msTheme === "light" ? "light" : "dark";
+
+  return (
+    <MapFrame height={height}>
+      <YMap location={location}>
+        <YMapDefaultSchemeLayer theme={theme} />
+        <YMapDefaultFeaturesLayer />
+
+        {points.map((point) => (
+          <YMapMarker
+            key={point.id}
+            coordinates={[point.lng, point.lat]}
+            onClick={onSelect ? () => onSelect(point.id) : undefined}
+          >
+            <button
+              type="button"
+              className={`map-marker ${point.highlighted ? "is-hot" : ""}`}
+              onClick={onSelect ? () => onSelect(point.id) : undefined}
+            >
+              {point.label ?? ""}
+            </button>
+          </YMapMarker>
+        ))}
+
+        {draggablePoint && (
+          <YMapMarker
+            coordinates={[draggablePoint.lng, draggablePoint.lat]}
+            draggable
+            onDragEnd={(coordinates) =>
+              onDragEnd?.({ lat: coordinates[1], lng: coordinates[0] })
+            }
+          >
+            <span className="map-marker is-draggable" />
+          </YMapMarker>
+        )}
+      </YMap>
+
+      {points.length === 0 && !draggablePoint && emptyHint && (
+        <p className="map-empty">{emptyHint}</p>
+      )}
+    </MapFrame>
+  );
+}
+
 export function VenueMap({
   points,
   center,
@@ -96,62 +167,17 @@ export function VenueMap({
     );
   }
 
-  const {
-    YMap,
-    YMapDefaultSchemeLayer,
-    YMapDefaultFeaturesLayer,
-    YMapMarker,
-    useDefault,
-  } = api;
-
-  const anchor =
-    center ??
-    (points[0] ? { lat: points[0].lat, lng: points[0].lng } : undefined) ??
-    (draggablePoint ?? MOSCOW);
-
   return (
-    <MapFrame height={height}>
-      <YMap
-        location={useDefault({
-          center: [anchor.lng, anchor.lat] as [number, number],
-          zoom,
-        })}
-      >
-        <YMapDefaultSchemeLayer theme="dark" />
-        <YMapDefaultFeaturesLayer />
-
-        {points.map((point) => (
-          <YMapMarker
-            key={point.id}
-            coordinates={[point.lng, point.lat]}
-            onClick={onSelect ? () => onSelect(point.id) : undefined}
-          >
-            <button
-              type="button"
-              className={`map-marker ${point.highlighted ? "is-hot" : ""}`}
-              onClick={onSelect ? () => onSelect(point.id) : undefined}
-            >
-              {point.label ?? ""}
-            </button>
-          </YMapMarker>
-        ))}
-
-        {draggablePoint && (
-          <YMapMarker
-            coordinates={[draggablePoint.lng, draggablePoint.lat]}
-            draggable
-            onDragEnd={(coordinates) =>
-              onDragEnd?.({ lat: coordinates[1], lng: coordinates[0] })
-            }
-          >
-            <span className="map-marker is-draggable" />
-          </YMapMarker>
-        )}
-      </YMap>
-
-      {points.length === 0 && !draggablePoint && emptyHint && (
-        <p className="map-empty">{emptyHint}</p>
-      )}
-    </MapFrame>
+    <LoadedVenueMap
+      api={api}
+      points={points}
+      center={center}
+      zoom={zoom}
+      height={height}
+      onSelect={onSelect}
+      draggablePoint={draggablePoint}
+      onDragEnd={onDragEnd}
+      emptyHint={emptyHint}
+    />
   );
 }

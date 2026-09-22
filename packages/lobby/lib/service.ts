@@ -195,6 +195,13 @@ export function createLobbyService(
       const depositEnabled =
         input.rentTotal > 0 ? Boolean(input.depositEnabled) : false;
 
+      if (Number.isNaN(input.startAt.getTime())) {
+        throw new ValidationError("Некорректная дата начала");
+      }
+      if (input.startAt.getTime() < Date.now() - 5 * 60 * 1000) {
+        throw new ValidationError("Нельзя создать Лобби в прошлом");
+      }
+
       return withTransaction(pool, async (client) => {
         const lobbyResult = await client.query(
           `INSERT INTO lobbies
@@ -335,14 +342,29 @@ export function createLobbyService(
           [lobbyId]
         );
         const lobby = mapLobby(lobbyResult.rows[0]!);
-        if (!["open", "full"].includes(lobby.status)) {
+        if (!["open", "gathering"].includes(lobby.status)) {
           throw new ValidationError("Лобби не принимает записи");
         }
 
-        await client.query(
-          `UPDATE slots SET user_id = $1, version = version + 1 WHERE id = $2`,
-          [userId, slotId]
+        const already = await client.query(
+          `SELECT id FROM slots WHERE lobby_id = $1 AND user_id = $2`,
+          [lobbyId, userId]
         );
+        if (already.rows[0]) {
+          throw new ValidationError("Вы уже заняли Слот в этом Лобби");
+        }
+
+        const booked = await client.query(
+          `UPDATE slots
+           SET user_id = $1, version = version + 1
+           WHERE id = $2
+             AND lobby_id = $3
+             AND user_id IS NULL
+             AND version = $4
+           RETURNING id`,
+          [userId, slotId, lobbyId, Number(slotRow.version)]
+        );
+        if (!booked.rows[0]) throw new SlotTakenError();
 
         await client.query(
           `INSERT INTO presence_records (slot_id, lobby_id, user_id, status)
@@ -364,11 +386,16 @@ export function createLobbyService(
         }
 
         const details = await loadDetails(client, lobbyId);
-        const newStatus = nextLobbyStatus(details.filledCount, details.slotCount);
-        await client.query(`UPDATE lobbies SET status = $1 WHERE id = $2`, [
-          newStatus,
-          lobbyId,
-        ]);
+        if (lobby.status !== "gathering") {
+          const newStatus = nextLobbyStatus(
+            details.filledCount,
+            details.slotCount
+          );
+          await client.query(`UPDATE lobbies SET status = $1 WHERE id = $2`, [
+            newStatus,
+            lobbyId,
+          ]);
+        }
 
         return loadDetails(client, lobbyId);
       });
@@ -377,7 +404,8 @@ export function createLobbyService(
     async releaseSlot(lobbyId, slotId, userId) {
       return withTransaction(pool, async (client) => {
         const slotResult = await client.query(
-          `SELECT s.*, l.start_at, l.organizer_id, l.rent_total, l.deposit_enabled, l.slot_count
+          `SELECT s.*, l.start_at, l.organizer_id, l.rent_total, l.deposit_enabled,
+                  l.slot_count, l.status AS lobby_status
            FROM slots s
            JOIN lobbies l ON l.id = s.lobby_id
            WHERE s.id = $1 AND s.lobby_id = $2 FOR UPDATE`,
@@ -414,9 +442,13 @@ export function createLobbyService(
           );
         }
 
-        await client.query(`UPDATE lobbies SET status = 'open' WHERE id = $1`, [
-          lobbyId,
-        ]);
+        const lobbyStatus = slotRow.lobby_status as LobbyStatus;
+        if (lobbyStatus === "open" || lobbyStatus === "full") {
+          await client.query(
+            `UPDATE lobbies SET status = 'open' WHERE id = $1`,
+            [lobbyId]
+          );
+        }
         return loadDetails(client, lobbyId);
       });
     },
@@ -450,6 +482,13 @@ export function createLobbyService(
       if (lobby.organizerId !== organizerId) throw new ForbiddenError();
       await pool.query(
         `UPDATE lobbies SET status = 'finished' WHERE id = $1`,
+        [lobbyId]
+      );
+      await pool.query(
+        `UPDATE users SET games_played = games_played + 1
+         WHERE id IN (
+           SELECT user_id FROM slots WHERE lobby_id = $1 AND user_id IS NOT NULL
+         )`,
         [lobbyId]
       );
       return loadDetails(pool, lobbyId);

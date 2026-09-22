@@ -5,6 +5,7 @@ import { api, LEVEL_LABELS, type Lobby, type Passport } from "../api";
 import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
 import { useGeolocation } from "../lib/useGeolocation";
 import { formatStartAt, initialsOf } from "../lib/format";
+import { refreshMe } from "../lib/useMe";
 
 /** Окно Явки: PRODUCT §4.6 opens it at T−20 and closes it at T+15. */
 const WINDOW_OPENS_MS = -20 * 60 * 1000;
@@ -55,6 +56,8 @@ export function PassportPage() {
       // Geo is an enhancement: a refusal still allows the one tap confirmation.
       const position = geo.position ?? (await geo.request());
       await api.confirmOnSite(mySlot.id, position ?? undefined);
+      refreshMe();
+      load();
       setMarked(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Не удалось отметиться");

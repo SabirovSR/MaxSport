@@ -40,14 +40,12 @@ export function RosterPage() {
   // presence change reaches the organiser without a manual refresh.
   useEffect(() => {
     if (!id) return;
-    const source = new EventSource(api.lobbyStreamUrl(id));
-    source.onmessage = () => {
+    return api.subscribeLobby(id, () => {
       api
         .getRoster(id)
         .then((data) => setRoster(data.roster))
         .catch(() => undefined);
-    };
-    return () => source.close();
+    });
   }, [id]);
 
   async function mark(slotId: string, status: string) {
