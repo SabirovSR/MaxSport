@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import {
   DomainError,
+  httpStatusForDomainError,
   UnauthorizedError,
   type Pool,
 } from "@maxsport/shared";
@@ -41,12 +42,17 @@ function handleError(error: unknown) {
     };
   }
   if (error instanceof DomainError) {
-    return { statusCode: error.code === "UNAUTHORIZED" ? 401 : 400, body: { error: error.message, code: error.code } };
+    return {
+      statusCode: httpStatusForDomainError(error),
+      body: { error: error.message, code: error.code },
+    };
   }
   if (error instanceof UnauthorizedError) {
     return { statusCode: 401, body: { error: error.message } };
   }
-  throw error;
+  // BUG-018: Unknown errors should still produce structured JSON, not HTML.
+  console.error(error);
+  return { statusCode: 500, body: { error: "Внутренняя ошибка сервера" } };
 }
 
 function optionalNumber(value: string | undefined): number | undefined {
@@ -514,9 +520,8 @@ export async function registerApiRoutes(
   });
 
   app.get("/api/lobbies/:id/stream", async (request, reply) => {
-    // EventSource cannot set request headers, so the browser passes initData
-    // as a query parameter; requireAuth accepts either. This must resolve
-    // before writeHead, otherwise the error cannot be reported as a status.
+    // Authenticate before writeHead, otherwise an auth error cannot be
+    // reported as a normal JSON response.
     try {
       await requireAuth(request, deps.pool, deps.botToken);
     } catch (error) {

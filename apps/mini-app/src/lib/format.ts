@@ -23,6 +23,15 @@ export function rememberSport(code: string) {
   }
 }
 
+export function forgetSport(code: string) {
+  try {
+    const next = readMySports().filter((item) => item !== code);
+    localStorage.setItem(MY_SPORTS_KEY, JSON.stringify(next));
+  } catch {
+    // Private mode: there is nothing persistent to update.
+  }
+}
+
 export function formatDistance(metres?: number): string | null {
   if (metres == null || !Number.isFinite(metres)) return null;
   if (metres < 950) return `${Math.round(metres / 10) * 10} м`;

@@ -27,6 +27,7 @@ export function LobbyPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [staticMapUrl, setStaticMapUrl] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -44,16 +45,27 @@ export function LobbyPage() {
 
   useEffect(() => {
     if (!id) return;
-    const source = new EventSource(api.lobbyStreamUrl(id));
-    source.onmessage = (event) => {
-      try {
-        setLobby(JSON.parse(event.data) as Lobby);
-      } catch {
-        // A malformed frame should not tear down a working stream.
-      }
-    };
-    return () => source.close();
+    return api.subscribeLobby(id, setLobby);
   }, [id]);
+
+  useEffect(() => {
+    if (!lobby) return;
+    let active = true;
+    let objectUrl: string | null = null;
+    setStaticMapUrl(null);
+    api
+      .getStaticMap(lobby.venue.lat, lobby.venue.lng)
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setStaticMapUrl(objectUrl);
+      })
+      .catch(() => active && setStaticMapUrl(null));
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [lobby?.venue.lat, lobby?.venue.lng]);
 
   async function book(slotId: string) {
     if (!id) return;
@@ -126,8 +138,10 @@ export function LobbyPage() {
 
   const freeSlots = lobby.slots.filter((slot) => !slot.userId);
   const freeRoles = [
-    ...new Set(freeSlots.map((slot) => slot.roleRequired).filter(Boolean)),
-  ] as string[];
+    ...new Set(
+      freeSlots.map((slot) => slot.roleRequired ?? "Любое амплуа")
+    ),
+  ];
   const mySlot = lobby.slots.find((slot) => slot.userId === userId);
   const isOrganizer = lobby.organizer.id === userId;
   const routeUrl = `https://yandex.ru/maps/?rtext=~${lobby.venue.lat},${lobby.venue.lng}&rtt=auto`;
@@ -149,15 +163,13 @@ export function LobbyPage() {
         {SPORT_LABELS[lobby.sport] ?? lobby.sport}, {formatStartAt(lobby.startAt)}
       </h2>
 
-      <img
-        className="static-map"
-        src={api.staticMapUrl(lobby.venue.lat, lobby.venue.lng)}
-        alt={`Карта: ${lobby.venue.address}`}
-        loading="lazy"
-        onError={(event) => {
-          event.currentTarget.style.display = "none";
-        }}
-      />
+      {staticMapUrl && (
+        <img
+          className="static-map"
+          src={staticMapUrl}
+          alt={`Карта: ${lobby.venue.address}`}
+        />
+      )}
 
       <p className="card-meta" style={{ marginTop: "var(--ms-space-3)" }}>
         <strong style={{ color: "var(--ms-text-primary)" }}>
@@ -248,14 +260,16 @@ export function LobbyPage() {
             Отменить
           </Button>
         )}
-        {isOrganizer && (
+        {isOrganizer &&
+          lobby.status !== "cancelled" &&
+          lobby.status !== "finished" && (
           <Button
             variant="secondary"
             onClick={() => navigate(`/lobby/${id}/roster`)}
           >
             Ростер
           </Button>
-        )}
+          )}
         <Button variant="secondary" loading={busy} onClick={share}>
           Поделиться
         </Button>

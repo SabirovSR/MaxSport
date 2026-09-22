@@ -12,13 +12,15 @@ async function apiFetch<T>(
   path: string,
   init?: RequestInit
 ): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set("X-Init-Data", getInitData());
+  if (init?.body != null && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      "X-Init-Data": getInitData(),
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -151,15 +153,27 @@ export const api = {
       `/api/geo/reverse?lat=${lat}&lng=${lng}`
     );
   },
-  staticMapUrl(lat: number, lng: number, width = 640, height = 280) {
+  async getStaticMap(
+    lat: number,
+    lng: number,
+    width = 640,
+    height = 280
+  ) {
     const search = new URLSearchParams({
       lat: String(lat),
       lng: String(lng),
       width: String(width),
       height: String(height),
-      initData: getInitData(),
     });
-    return `${API_BASE}/api/geo/static?${search.toString()}`;
+    const response = await fetch(
+      `${API_BASE}/api/geo/static?${search.toString()}`,
+      { headers: { "X-Init-Data": getInitData() } }
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error ?? `HTTP ${response.status}`);
+    }
+    return response.blob();
   },
   listPayments(lobbyId: string) {
     return apiFetch<{ holds: PaymentHold[] }>(
@@ -185,6 +199,12 @@ export const api = {
     return apiFetch<{ lobby: Lobby }>(
       `/api/lobbies/${lobbyId}/slots/${slotId}/book`,
       { method: "POST" }
+    );
+  },
+  releaseSlot(lobbyId: string, slotId: string) {
+    return apiFetch<{ lobby: Lobby }>(
+      `/api/lobbies/${lobbyId}/slots/${slotId}`,
+      { method: "DELETE" }
     );
   },
   publishCard(lobbyId: string) {
@@ -234,9 +254,61 @@ export const api = {
       method: "POST",
     });
   },
-  lobbyStreamUrl(lobbyId: string) {
-    // EventSource cannot set headers, so initData travels in the query string.
-    return `${API_BASE}/api/lobbies/${lobbyId}/stream?initData=${encodeURIComponent(getInitData())}`;
+  subscribeLobby(
+    lobbyId: string,
+    onMessage: (lobby: Lobby) => void,
+    onError?: (error: Error) => void
+  ) {
+    const controller = new AbortController();
+    void (async () => {
+      while (!controller.signal.aborted) {
+        try {
+          const response = await fetch(
+            `${API_BASE}/api/lobbies/${lobbyId}/stream`,
+            {
+              headers: { "X-Init-Data": getInitData() },
+              signal: controller.signal,
+            }
+          );
+          if (!response.ok || !response.body) {
+            onError?.(new Error(`Realtime HTTP ${response.status}`));
+            return;
+          }
+
+          const reader = response.body
+            .pipeThrough(new TextDecoderStream())
+            .getReader();
+          let buffer = "";
+          while (!controller.signal.aborted) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += value;
+            const frames = buffer.split(/\r?\n\r?\n/);
+            buffer = frames.pop() ?? "";
+            for (const frame of frames) {
+              const data = frame
+                .split(/\r?\n/)
+                .filter((line) => line.startsWith("data:"))
+                .map((line) => line.slice(5).trimStart())
+                .join("\n");
+              if (!data) continue;
+              try {
+                onMessage(JSON.parse(data) as Lobby);
+              } catch {
+                // Ignore a malformed frame and keep the live stream running.
+              }
+            }
+          }
+        } catch (cause) {
+          if (controller.signal.aborted) return;
+          onError?.(
+            cause instanceof Error ? cause : new Error("Realtime недоступен")
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1_500));
+      }
+    })();
+    return () => controller.abort();
   },
   startLobby(lobbyId: string) {
     return apiFetch<{ lobby: Lobby }>(`/api/lobbies/${lobbyId}/start`, {

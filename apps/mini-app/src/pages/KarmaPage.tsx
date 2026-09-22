@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@maxhub/max-ui";
 import { api, type Lobby, type RosterEntry } from "../api";
 import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
-import { useMe } from "../lib/useMe";
+import { refreshMe, useMe } from "../lib/useMe";
 import { initialsOf } from "../lib/format";
 
 const TAGS_BY_SPORT: Record<string, string[]> = {
@@ -34,6 +34,9 @@ export function KarmaPage() {
   const [roster, setRoster] = useState<RosterEntry[] | null>(null);
   const [lobby, setLobby] = useState<Lobby | null>(null);
   const [voted, setVoted] = useState<Record<string, true>>({});
+  const [choices, setChoices] = useState<
+    Record<string, { reliability: Reliability; tag?: string }>
+  >({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,17 +53,21 @@ export function KarmaPage() {
 
   useEffect(load, [load]);
 
-  async function vote(entry: RosterEntry, reliability: Reliability, tag?: string) {
+  async function vote(entry: RosterEntry) {
     if (!id) return;
+    const choice = choices[entry.userId] ?? {
+      reliability: suggestedReliability(entry.status),
+    };
     setBusy(entry.userId);
     setError(null);
     try {
       await api.submitKarma({
         targetId: entry.userId,
         lobbyId: id,
-        reliability,
-        tag,
+        reliability: choice.reliability,
+        tag: choice.tag,
       });
+      refreshMe();
       setVoted((current) => ({ ...current, [entry.userId]: true }));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Не удалось отправить");
@@ -125,9 +132,20 @@ export function KarmaPage() {
                 key={option.value}
                 type="button"
                 className="chip"
-                aria-pressed={suggestedReliability(entry.status) === option.value}
+                aria-pressed={
+                  (choices[entry.userId]?.reliability ??
+                    suggestedReliability(entry.status)) === option.value
+                }
                 disabled={busy === entry.userId}
-                onClick={() => vote(entry, option.value)}
+                onClick={() =>
+                  setChoices((current) => ({
+                    ...current,
+                    [entry.userId]: {
+                      ...current[entry.userId],
+                      reliability: option.value,
+                    },
+                  }))
+                }
               >
                 {option.label}
               </button>
@@ -143,9 +161,19 @@ export function KarmaPage() {
                     key={tag}
                     type="button"
                     className="chip"
+                    aria-pressed={choices[entry.userId]?.tag === tag}
                     disabled={busy === entry.userId}
                     onClick={() =>
-                      vote(entry, suggestedReliability(entry.status), tag)
+                      setChoices((current) => ({
+                        ...current,
+                        [entry.userId]: {
+                          reliability:
+                            current[entry.userId]?.reliability ??
+                            suggestedReliability(entry.status),
+                          tag:
+                            current[entry.userId]?.tag === tag ? undefined : tag,
+                        },
+                      }))
                     }
                   >
                     {tag}
@@ -154,6 +182,16 @@ export function KarmaPage() {
               </div>
             </>
           )}
+          <div style={{ marginTop: "var(--ms-space-3)" }}>
+            <Button
+              stretched
+              loading={busy === entry.userId}
+              disabled={busy !== null && busy !== entry.userId}
+              onClick={() => vote(entry)}
+            >
+              Отправить оценку
+            </Button>
+          </div>
         </div>
       ))}
 

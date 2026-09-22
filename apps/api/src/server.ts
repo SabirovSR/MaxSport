@@ -35,6 +35,7 @@ function env(name: string, fallback?: string): string {
 async function main() {
   const port = Number(process.env.PORT ?? 3000);
   const publicUrl = env("PUBLIC_URL", "http://localhost:3000");
+  const publicOrigin = new URL(publicUrl).origin;
   const botToken = process.env.MAX_BOT_TOKEN ?? "";
   const webhookSecret = process.env.WEBHOOK_SECRET ?? "";
   const botUsername = process.env.BOT_USERNAME ?? "gov_max_sport_bot";
@@ -68,8 +69,28 @@ async function main() {
     staticKey: process.env.YANDEX_STATIC_API_KEY ?? "",
   });
 
-  const app = Fastify({ logger: true });
-  await app.register(cors, { origin: true });
+  // BUG-003: Mask initData in logged URLs to prevent auth token leakage.
+  const app = Fastify({
+    logger: {
+      level: "info",
+      serializers: {
+        req(request) {
+          const url = (request.url ?? "").replace(
+            /([?&])initData=[^&]*/g,
+            "$1initData=***"
+          );
+          return { method: request.method, url, hostname: request.hostname };
+        },
+      },
+    },
+  });
+  await app.register(cors, {
+    origin: [
+      publicOrigin,
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ],
+  });
 
   // The Mini App registration owns reply.sendFile, which the SPA fallback at
   // the bottom of this file depends on.
@@ -174,6 +195,29 @@ async function main() {
       app.log.warn({ err: error }, "Webhook subscription failed");
     }
   }
+
+  // BUG-001: Graceful shutdown — close all resources on SIGTERM/SIGINT.
+  let shuttingDown = false;
+  async function shutdown(signal: string) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    app.log.info(`Received ${signal}, shutting down…`);
+    notifications.stop();
+    const results = await Promise.allSettled([
+      app.close(),
+      realtime.close(),
+      pool.end(),
+    ]);
+    for (const result of results) {
+      if (result.status === "rejected") {
+        app.log.error({ err: result.reason }, "Shutdown step failed");
+        process.exitCode = 1;
+      }
+    }
+  }
+
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+  process.on("SIGINT", () => void shutdown("SIGINT"));
 }
 
 main().catch((error) => {

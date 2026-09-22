@@ -10,11 +10,25 @@
   box-sizing: border-box;
 }
 
+/*
+ * MAX resizes the Mini App webview independently of the device zoom. If the
+ * root font-size is left to the client (or to MaxUI), rem-based type and
+ * token-based type grow at different rates and headings wrap unevenly.
+ */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--ms-surface-base);
   color: var(--ms-text-primary);
   font-family: var(--ms-font-sans);
+  font-size: var(--ms-text-body);
+  line-height: var(--ms-leading-body);
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -38,6 +52,7 @@ body {
   justify-content: space-between;
   gap: var(--ms-space-3);
   margin-bottom: var(--ms-space-4);
+  min-width: 0;
 }
 
 .logo {
@@ -45,10 +60,12 @@ body {
   align-items: center;
   gap: var(--ms-space-2);
   font-weight: var(--ms-weight-bold);
-  font-size: 1.125rem;
+  font-size: var(--ms-text-body-lg);
   letter-spacing: var(--ms-tracking-tight);
   color: inherit;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .logo span {
@@ -442,6 +459,11 @@ body {
 
 .tabbar a[aria-current="page"] {
   color: var(--ms-accent-text);
+}
+
+.tab-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* ---- Forms ---------------------------------------------------------------- */

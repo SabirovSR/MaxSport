@@ -40,6 +40,20 @@ export function createKarmaService(pool: Pool): KarmaService {
       if (input.voterId === input.targetId) {
         throw new ValidationError("Нельзя голосовать за себя");
       }
+      const voter = await pool.query(
+        `SELECT 1 FROM slots WHERE lobby_id = $1 AND user_id = $2`,
+        [input.lobbyId, input.voterId]
+      );
+      if (!voter.rows[0]) {
+        throw new ValidationError("Голосовать могут только участники Лобби");
+      }
+      const target = await pool.query(
+        `SELECT 1 FROM presence_records WHERE lobby_id = $1 AND user_id = $2`,
+        [input.lobbyId, input.targetId]
+      );
+      if (!target.rows[0]) {
+        throw new ValidationError("Оценить можно только участника этого Лобби");
+      }
       await pool.query(
         `INSERT INTO karma_votes (voter_id, target_id, lobby_id, reliability, tag)
          VALUES ($1, $2, $3, $4, $5)

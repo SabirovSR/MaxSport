@@ -37,3 +37,19 @@ export class UnauthorizedError extends DomainError {
     super(message, "UNAUTHORIZED");
   }
 }
+
+/** Maps domain codes to HTTP so the Mini App can branch on status, not text. */
+export function httpStatusForDomainError(error: DomainError): number {
+  switch (error.code) {
+    case "UNAUTHORIZED":
+      return 401;
+    case "FORBIDDEN":
+      return 403;
+    case "NOT_FOUND":
+      return 404;
+    case "SLOT_TAKEN":
+      return 409;
+    default:
+      return 400;
+  }
+}

@@ -14,7 +14,8 @@ export function SlotMatrix({
   compact?: boolean;
   limit?: number;
 }) {
-  const shown = limit ? slots.slice(0, limit) : slots;
+  const sorted = [...slots].sort((a, b) => a.index - b.index);
+  const shown = limit ? sorted.slice(0, limit) : sorted;
   const hidden = slots.length - shown.length;
 
   return (

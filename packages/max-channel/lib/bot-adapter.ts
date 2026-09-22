@@ -1,5 +1,10 @@
 import { Bot, Context } from "@maxhub/max-bot-api";
 
+export interface BotReplyButton {
+  label: string;
+  callbackData: string;
+}
+
 export interface MaxBotAdapter {
   handleUpdate(update: unknown): Promise<void>;
   registerCommand(
@@ -15,6 +20,10 @@ export interface MaxBotAdapter {
       userId: number;
       payload: string;
       reply: (text: string) => Promise<void>;
+      replyWithButtons: (
+        text: string,
+        buttons: BotReplyButton[]
+      ) => Promise<void>;
     }) => Promise<void>
   ): void;
 }
@@ -36,6 +45,10 @@ export function createMaxBotAdapter(token: string): MaxBotAdapter {
       userId: number;
       payload: string;
       reply: (text: string) => Promise<void>;
+      replyWithButtons: (
+        text: string,
+        buttons: BotReplyButton[]
+      ) => Promise<void>;
     }) => Promise<void>
   >();
   const commands = new Map<
@@ -76,6 +89,25 @@ export function createMaxBotAdapter(token: string): MaxBotAdapter {
       payload,
       reply: async (text) => {
         await ctx.reply(text);
+      },
+      replyWithButtons: async (text, buttons) => {
+        await ctx.reply({
+          text,
+          attachments: [
+            {
+              type: "inline_keyboard",
+              payload: {
+                buttons: buttons.map((btn) => [
+                  {
+                    type: "callback",
+                    text: btn.label,
+                    payload: btn.callbackData,
+                  },
+                ]),
+              },
+            },
+          ],
+        } as never);
       },
     });
   });

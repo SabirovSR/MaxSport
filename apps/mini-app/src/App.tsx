@@ -1,5 +1,11 @@
 import { useEffect } from "react";
-import { Routes, Route, Link, useNavigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Link,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { getStartParam } from "./api";
 import { Mark } from "./components/Mark";
 import { TabBar } from "./components/TabBar";
@@ -14,6 +20,7 @@ import { initialsOf } from "./lib/format";
 
 export function App() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { me } = useMe();
   const photoUrl = window.WebApp?.initDataUnsafe?.user?.photo_url;
   const reliability = me?.user.reliabilityPct ?? 0;
@@ -28,6 +35,24 @@ export function App() {
       navigate(`/lobby/${start.slice("lobby_".length)}`, { replace: true });
     }
   }, [navigate]);
+
+  useEffect(() => {
+    const backButton = window.WebApp?.BackButton;
+    if (!backButton) return;
+    const isRoot = ["/", "/create", "/passport"].includes(pathname);
+    const goBack = () => navigate(-1);
+
+    if (isRoot) {
+      backButton.hide();
+      return;
+    }
+    backButton.show();
+    backButton.onClick(goBack);
+    return () => {
+      backButton.offClick?.(goBack);
+      backButton.hide();
+    };
+  }, [navigate, pathname]);
 
   return (
     <>

@@ -18,8 +18,11 @@ const STEPS = ["Игра", "Площадка", "Состав"] as const;
 function defaultStart() {
   const date = new Date();
   date.setHours(date.getHours() + 3, 0, 0, 0);
-  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+  const twoDigits = (value: number) => String(value).padStart(2, "0");
+  return [
+    `${date.getFullYear()}-${twoDigits(date.getMonth() + 1)}-${twoDigits(date.getDate())}`,
+    `${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`,
+  ].join("T");
 }
 
 export function CreateLobbyPage() {
