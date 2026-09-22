@@ -330,7 +330,7 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
       const { id } = request.params as { id: string };
       const lobby = await deps.lobbies.getById(id);
       if (lobby.organizerId !== user.id) {
-        return reply.status(403).send({ error: "Только Организатор" });
+        return reply.status(403).send({ error: "Только организатор" });
       }
       const { messageId } = await deps.chatCard.publishToOrganizer(
         lobby,

@@ -202,7 +202,7 @@ export function createKarmaService(pool: Pool): KarmaService {
       );
       if (!preferredRoles) {
         throw new ValidationError(
-          "Выберите не более четырёх допустимых Амплуа"
+          "Выберите не более четырёх допустимых амплуа"
         );
       }
       const result = await pool.query(

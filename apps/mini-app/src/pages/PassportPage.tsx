@@ -253,7 +253,7 @@ export function PassportPage() {
             </select>
           </div>
           <div className="form-group">
-            <label>Предпочитаемые Амплуа (до 4)</label>
+            <label>Предпочитаемые амплуа (до 4)</label>
             <div className="chips">
               {(ROLE_OPTIONS[skillSport] ?? []).map((role) => (
                 <button

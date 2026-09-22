@@ -73,7 +73,7 @@ export function LobbyComposeFields({
       </div>
 
       <div className="form-group">
-        <label>Нужные Амплуа</label>
+        <label>Нужные амплуа</label>
         <div className="chips">
           {(ROLE_OPTIONS[sport] ?? []).map((role) => (
             <button
@@ -88,7 +88,7 @@ export function LobbyComposeFields({
           ))}
         </div>
         <p className="form-hint">
-          Отмеченные Амплуа станут отдельными {slotNoun(true, "instrumental")}.
+          Отмеченные амплуа станут отдельными {slotNoun(true, "instrumental")}.
           Остальные {slotNoun(true)} открыты для любого.
         </p>
       </div>
@@ -104,7 +104,7 @@ export function LobbyComposeFields({
             })
           }
         >
-          <option value="approval">По заявке Организатору</option>
+          <option value="approval">По заявке организатору</option>
           <option value="instant">Сразу занимают слот</option>
         </select>
         <p className="form-hint">
