@@ -6,13 +6,11 @@ export interface NotificationScheduler {
   start(): void;
   stop(): void;
   scheduleLobbyJobs(lobbyId: string, startAt: Date): Promise<void>;
+  rescheduleLobbyJobs(lobbyId: string, startAt: Date): Promise<void>;
 }
 
 const JOB_OFFSETS: Record<
-  Exclude<
-    ScheduledJobKind,
-    "presence_window" | "karma_poll" | "no_show_check"
-  >,
+  Exclude<ScheduledJobKind, "presence_window" | "karma_poll" | "no_show_check">,
   number
 > = {
   reminder_t24: -24 * 60,
@@ -104,7 +102,11 @@ export function createNotificationScheduler(
             text: `🏐 Идёшь на игру? Подтверди участие в MAX Sport.`,
             buttons: [
               [
-                { type: "callback", text: "Иду", payload: `presence_go:${player.slot_id}` },
+                {
+                  type: "callback",
+                  text: "Иду",
+                  payload: `presence_go:${player.slot_id}`,
+                },
                 {
                   type: "callback",
                   text: "Не смогу",
@@ -119,7 +121,11 @@ export function createNotificationScheduler(
             text: `⏰ Через 2 часа игра! Подтверди, что идёшь.`,
             buttons: [
               [
-                { type: "callback", text: "Иду", payload: `presence_go:${player.slot_id}` },
+                {
+                  type: "callback",
+                  text: "Иду",
+                  payload: `presence_go:${player.slot_id}`,
+                },
                 {
                   type: "callback",
                   text: "Не смогу",
@@ -174,7 +180,9 @@ export function createNotificationScheduler(
       }
 
       if (job.kind === "venue_ping_t60" && job.venue_chat_id) {
-        const onSite = players.rows.filter((p) => p.status === "on_site").length;
+        const onSite = players.rows.filter(
+          (p) => p.status === "on_site"
+        ).length;
         await maxApi.sendMessage({
           chatId: Number(job.venue_chat_id),
           text: `📍 Группа на подходе: явка ${onSite}/${players.rows.length}\n🏟 ${job.venue_name}`,
@@ -205,5 +213,11 @@ export function createNotificationScheduler(
       timer = null;
     },
     scheduleLobbyJobs: enqueueJobs,
+    async rescheduleLobbyJobs(lobbyId, startAt) {
+      await pool.query(`DELETE FROM scheduled_jobs WHERE lobby_id = $1`, [
+        lobbyId,
+      ]);
+      await enqueueJobs(lobbyId, startAt);
+    },
   };
 }

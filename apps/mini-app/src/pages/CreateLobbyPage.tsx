@@ -1,17 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@maxhub/max-ui";
 import { api, LEVEL_LABELS, SPORT_LABELS, type Venue } from "../api";
+import { LobbyComposeFields } from "../components/LobbyComposeFields";
 import { VenuePicker, type ResolvedVenue } from "../components/VenuePicker";
+import { useToast } from "../components/Toast";
 import { useGeolocation } from "../lib/useGeolocation";
-import { formatMoney, rememberSport } from "../lib/format";
-
-const ROLE_OPTIONS: Record<string, string[]> = {
-  volleyball: ["Связующий", "Доигровщик", "Центральный блокирующий", "Либеро"],
-  mini_football: ["Вратарь", "Защитник", "Полузащитник", "Нападающий"],
-  basketball: ["Разыгрывающий", "Защитник", "Форвард", "Центровой"],
-  padel_tennis: ["Левый", "Правый"],
-};
+import { rememberSport } from "../lib/format";
 
 const STEPS = ["Игра", "Площадка", "Состав"] as const;
 
@@ -27,6 +22,7 @@ function defaultStart() {
 
 export function CreateLobbyPage() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const geo = useGeolocation();
 
   const [step, setStep] = useState(0);
@@ -38,9 +34,19 @@ export function CreateLobbyPage() {
   const [slotCount, setSlotCount] = useState(12);
   const [rentTotal, setRentTotal] = useState(4200);
   const [depositEnabled, setDepositEnabled] = useState(true);
+  const [joinMode, setJoinMode] = useState<"instant" | "approval">("approval");
   const [roles, setRoles] = useState<string[]>(["Связующий"]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const compose = {
+    gameLevel,
+    slotCount,
+    roles,
+    joinMode,
+    rentTotal,
+    depositEnabled,
+  };
 
   useEffect(() => {
     api
@@ -53,24 +59,11 @@ export function CreateLobbyPage() {
     setRoles([]);
   }, [sport]);
 
-  const split = useMemo(
-    () => (slotCount > 0 ? Math.ceil(rentTotal / slotCount) : 0),
-    [rentTotal, slotCount]
-  );
-
   const stepValid = [
     Boolean(sport && gameLevel && startAt),
     venue !== null,
     slotCount >= 2 && roles.length <= slotCount,
   ];
-
-  function toggleRole(role: string) {
-    setRoles((current) =>
-      current.includes(role)
-        ? current.filter((item) => item !== role)
-        : [...current, role]
-    );
-  }
 
   async function submit() {
     if (!venue) return;
@@ -102,6 +95,7 @@ export function CreateLobbyPage() {
         slotCount,
         rentTotal,
         depositEnabled: rentTotal > 0 && depositEnabled,
+        joinMode,
         startAt: new Date(startAt).toISOString(),
         // Required Амплуа occupy the last slots, leaving the opening ones free
         // for anyone.
@@ -111,9 +105,13 @@ export function CreateLobbyPage() {
         })),
       });
       rememberSport(sport);
+      showToast("Лобби опубликовано");
       navigate(`/lobby/${lobby.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Не удалось создать Лобби");
+      const message =
+        cause instanceof Error ? cause.message : "Не удалось создать Лобби";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setBusy(false);
     }
@@ -189,74 +187,21 @@ export function CreateLobbyPage() {
       )}
 
       {step === 2 && (
-        <>
-          <div className="form-group">
-            <label htmlFor="slots">Сколько Слотов</label>
-            <input
-              id="slots"
-              type="number"
-              min={2}
-              max={24}
-              value={slotCount}
-              onChange={(event) => setSlotCount(Number(event.target.value))}
-            />
-            {slotCount < 2 && (
-              <p className="form-error">Минимум 2 Слота в Лобби.</p>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label>Нужные Амплуа</label>
-            <div className="chips">
-              {(ROLE_OPTIONS[sport] ?? []).map((role) => (
-                <button
-                  key={role}
-                  type="button"
-                  className="chip"
-                  aria-pressed={roles.includes(role)}
-                  onClick={() => toggleRole(role)}
-                >
-                  {role}
-                </button>
-              ))}
-            </div>
-            <p className="form-hint">
-              Отмеченные Амплуа станут отдельными Слотами. Остальные Слоты
-              открыты для любого.
-            </p>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="rent">Аренда Площадки, ₽</label>
-            <input
-              id="rent"
-              type="number"
-              min={0}
-              step={100}
-              value={rentTotal}
-              onChange={(event) => setRentTotal(Number(event.target.value))}
-            />
-            <p className="form-hint">
-              {rentTotal > 0
-                ? `Сплит: ${formatMoney(split)} с человека при ${slotCount} Слотах.`
-                : "Бесплатное Лобби, Залог недоступен."}
-            </p>
-          </div>
-
-          {rentTotal > 0 && (
-            <div className="form-group checkbox-row">
-              <input
-                id="deposit"
-                type="checkbox"
-                checked={depositEnabled}
-                onChange={(event) => setDepositEnabled(event.target.checked)}
-              />
-              <label htmlFor="deposit" style={{ margin: 0 }}>
-                Залог против неявок
-              </label>
-            </div>
-          )}
-        </>
+        <LobbyComposeFields
+          sport={sport}
+          showLevel={false}
+          values={compose}
+          onChange={(patch) => {
+            if (patch.gameLevel != null) setGameLevel(patch.gameLevel);
+            if (patch.slotCount != null) setSlotCount(patch.slotCount);
+            if (patch.roles) setRoles(patch.roles);
+            if (patch.joinMode) setJoinMode(patch.joinMode);
+            if (patch.rentTotal != null) setRentTotal(patch.rentTotal);
+            if (patch.depositEnabled != null) {
+              setDepositEnabled(patch.depositEnabled);
+            }
+          }}
+        />
       )}
 
       {error && <p className="form-error">{error}</p>}

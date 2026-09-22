@@ -7,6 +7,15 @@ export function createPool(databaseUrl: string): Pool {
   return new pg.Pool({ connectionString: databaseUrl });
 }
 
+export function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "23505"
+  );
+}
+
 export async function withTransaction<T>(
   pool: Pool,
   fn: (client: PoolClient) => Promise<T>

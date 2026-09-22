@@ -38,7 +38,10 @@ function handleError(error: unknown) {
     // would read as "you are not authorised" to the caller.
     return {
       statusCode: 502,
-      body: { error: "Картографический сервис недоступен", code: "GEO_UPSTREAM" },
+      body: {
+        error: "Картографический сервис недоступен",
+        code: "GEO_UPSTREAM",
+      },
     };
   }
   if (error instanceof DomainError) {
@@ -61,10 +64,7 @@ function optionalNumber(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-export async function registerApiRoutes(
-  app: FastifyInstance,
-  deps: ApiDeps
-) {
+export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
   app.get("/api/lobbies", async (request, reply) => {
     try {
       await requireAuth(request, deps.pool, deps.botToken);
@@ -96,11 +96,54 @@ export async function registerApiRoutes(
     }
   });
 
+  app.get("/api/me/lobbies", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const lobbies = await deps.lobbies.listMine(user.id);
+      return reply.send({ lobbies });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
   app.get("/api/lobbies/:id", async (request, reply) => {
     try {
       await requireAuth(request, deps.pool, deps.botToken);
       const { id } = request.params as { id: string };
       const lobby = await deps.lobbies.getById(id);
+      return reply.send({ lobby });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.patch("/api/lobbies/:id", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id } = request.params as { id: string };
+      const body = request.body as {
+        startAt?: string;
+        venueId?: string;
+        gameLevel?: string;
+        rentTotal?: number;
+        depositEnabled?: boolean;
+        slotCount?: number;
+        roleSlots?: Array<{ index: number; role: string }>;
+        joinMode?: "instant" | "approval";
+      };
+      const before = await deps.lobbies.getById(id);
+      const lobby = await deps.lobbies.updateLobby(id, user.id, {
+        ...body,
+        startAt: body.startAt ? new Date(body.startAt) : undefined,
+        gameLevel: body.gameLevel as never,
+      });
+      if (lobby.startAt.getTime() !== before.startAt.getTime()) {
+        await deps.notifications.rescheduleLobbyJobs(id, lobby.startAt);
+      }
+      await deps.chatCard.syncCard(id);
+      await deps.realtime.publishLobbyUpdate(id, lobby);
       return reply.send({ lobby });
     } catch (error) {
       const mapped = handleError(error);
@@ -121,6 +164,7 @@ export async function registerApiRoutes(
         depositEnabled?: boolean;
         slotCount: number;
         roleSlots?: Array<{ index: number; role: string }>;
+        joinMode?: "instant" | "approval";
       };
 
       const lobby = await deps.lobbies.create({
@@ -134,6 +178,7 @@ export async function registerApiRoutes(
         depositEnabled: body.depositEnabled,
         slotCount: body.slotCount,
         roleSlots: body.roleSlots,
+        joinMode: body.joinMode,
       });
 
       await deps.notifications.scheduleLobbyJobs(lobby.id, lobby.startAt);
@@ -159,6 +204,111 @@ export async function registerApiRoutes(
       return reply.status(mapped.statusCode).send(mapped.body);
     }
   });
+
+  app.post("/api/lobbies/:id/slots/:slotId/request", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id, slotId } = request.params as {
+        id: string;
+        slotId: string;
+      };
+      const joinRequest = await deps.lobbies.requestJoin(id, slotId, user.id);
+      await deps.realtime.publishLobbyUpdate(id, {
+        type: "join_request",
+        lobbyId: id,
+      });
+      return reply.status(201).send({ request: joinRequest });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.delete("/api/lobbies/:id/join-requests/me", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id } = request.params as { id: string };
+      await deps.lobbies.cancelJoinRequest(id, user.id);
+      await deps.realtime.publishLobbyUpdate(id, {
+        type: "join_request",
+        lobbyId: id,
+      });
+      return reply.send({ ok: true });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.get("/api/lobbies/:id/join-requests/me", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id } = request.params as { id: string };
+      const joinRequest = await deps.lobbies.getMyJoinRequest(id, user.id);
+      return reply.send({ request: joinRequest });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.get("/api/lobbies/:id/join-requests", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id } = request.params as { id: string };
+      const requests = await deps.lobbies.listJoinRequests(id, user.id);
+      return reply.send({ requests });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.post(
+    "/api/lobbies/:id/join-requests/:requestId/accept",
+    async (request, reply) => {
+      try {
+        const user = await requireAuth(request, deps.pool, deps.botToken);
+        const { id, requestId } = request.params as {
+          id: string;
+          requestId: string;
+        };
+        const lobby = await deps.lobbies.acceptJoinRequest(
+          id,
+          requestId,
+          user.id
+        );
+        await deps.chatCard.syncCard(id);
+        await deps.realtime.publishLobbyUpdate(id, lobby);
+        return reply.send({ lobby });
+      } catch (error) {
+        const mapped = handleError(error);
+        return reply.status(mapped.statusCode).send(mapped.body);
+      }
+    }
+  );
+
+  app.post(
+    "/api/lobbies/:id/join-requests/:requestId/reject",
+    async (request, reply) => {
+      try {
+        const user = await requireAuth(request, deps.pool, deps.botToken);
+        const { id, requestId } = request.params as {
+          id: string;
+          requestId: string;
+        };
+        await deps.lobbies.rejectJoinRequest(id, requestId, user.id);
+        await deps.realtime.publishLobbyUpdate(id, {
+          type: "join_request",
+          lobbyId: id,
+        });
+        return reply.send({ ok: true });
+      } catch (error) {
+        const mapped = handleError(error);
+        return reply.status(mapped.statusCode).send(mapped.body);
+      }
+    }
+  );
 
   app.delete("/api/lobbies/:id/slots/:slotId", async (request, reply) => {
     try {
@@ -212,6 +362,8 @@ export async function registerApiRoutes(
       const { id } = request.params as { id: string };
       const lobby = await deps.lobbies.startLobby(id, user.id);
       await deps.presence.markNoShows(id);
+      await deps.chatCard.syncCard(id);
+      await deps.realtime.publishLobbyUpdate(id, lobby);
       return reply.send({ lobby });
     } catch (error) {
       const mapped = handleError(error);
@@ -240,6 +392,8 @@ export async function registerApiRoutes(
       const user = await requireAuth(request, deps.pool, deps.botToken);
       const { id } = request.params as { id: string };
       const lobby = await deps.lobbies.finishLobby(id, user.id);
+      await deps.chatCard.syncCard(id);
+      await deps.realtime.publishLobbyUpdate(id, lobby);
       return reply.send({ lobby });
     } catch (error) {
       const mapped = handleError(error);
@@ -311,6 +465,61 @@ export async function registerApiRoutes(
       const { userId } = request.params as { userId: string };
       const passport = await deps.karma.getPassport(userId);
       return reply.send({ passport });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.get("/api/passport/skills/:sport", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { sport } = request.params as { sport: string };
+      const skill = await deps.karma.getSportSkill(user.id, sport);
+      return reply.send({ skill });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.put("/api/passport/skills/:sport", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { sport } = request.params as { sport: string };
+      const body = request.body as {
+        gameLevel: "novice" | "amateur" | "advanced";
+        preferredRoles?: string[];
+      };
+      const skill = await deps.karma.upsertSportSkill(user.id, sport, {
+        gameLevel: body.gameLevel,
+        preferredRoles: body.preferredRoles ?? [],
+      });
+      return reply.send({ skill });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.delete("/api/passport/skills/:sport", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { sport } = request.params as { sport: string };
+      await deps.karma.deleteSportSkill(user.id, sport);
+      return reply.send({ ok: true });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.get("/api/lobbies/:id/karma/status", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id } = request.params as { id: string };
+      const status = await deps.karma.getKarmaStatus(id, user.id);
+      return reply.send({ status });
     } catch (error) {
       const mapped = handleError(error);
       return reply.status(mapped.statusCode).send(mapped.body);

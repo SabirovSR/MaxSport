@@ -1,4 +1,5 @@
 import type { Lobby } from "../api";
+import { initialsOf } from "../lib/format";
 
 /**
  * Reads the composition at a glance: filled slots are solid, slots that still
@@ -30,11 +31,19 @@ export function SlotMatrix({
           <div
             key={slot.id}
             className={`slot ${state}`}
-            title={slot.roleRequired ?? "Любое амплуа"}
+            title={
+              slot.occupant
+                ? `${slot.occupant.firstName} ${slot.occupant.lastName ?? ""}`.trim()
+                : (slot.roleRequired ?? "Любое амплуа")
+            }
           >
-            {!compact && !slot.userId && slot.roleRequired
-              ? slot.roleRequired.slice(0, 3)
-              : null}
+            {slot.occupant?.photoUrl ? (
+              <img src={slot.occupant.photoUrl} alt="" />
+            ) : slot.occupant ? (
+              initialsOf(slot.occupant.firstName, slot.occupant.lastName)
+            ) : !compact && slot.roleRequired ? (
+              slot.roleRequired.slice(0, 3)
+            ) : null}
           </div>
         );
       })}

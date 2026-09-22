@@ -8,10 +8,7 @@ export function getStartParam(): string | undefined {
   return window.WebApp?.initDataUnsafe?.start_param;
 }
 
-async function apiFetch<T>(
-  path: string,
-  init?: RequestInit
-): Promise<T> {
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set("X-Init-Data", getInitData());
   if (init?.body != null && !headers.has("Content-Type")) {
@@ -37,13 +34,25 @@ export interface Lobby {
   gameLevel: string;
   status: string;
   startAt: string;
-  venue: { id: string; name: string; address: string; lat: number; lng: number };
-  organizer: { id: string; firstName: string; lastName: string | null };
+  venue: {
+    id: string;
+    name: string;
+    address: string;
+    lat: number;
+    lng: number;
+  };
+  organizer: {
+    id: string;
+    firstName: string;
+    lastName: string | null;
+    photoUrl?: string | null;
+  };
   slots: Array<{
     id: string;
     roleRequired: string | null;
     userId: string | null;
     index: number;
+    occupant: PublicPlayer | null;
   }>;
   filledCount: number;
   slotCount: number;
@@ -51,8 +60,42 @@ export interface Lobby {
   rentTotal: number;
   depositEnabled: boolean;
   cardMessageId: string | null;
+  joinMode: "instant" | "approval";
   /** Present only when the feed request carried the user's position. */
   distanceM?: number;
+}
+
+export interface PublicPlayer {
+  id: string;
+  firstName: string;
+  lastName: string | null;
+  photoUrl: string | null;
+}
+
+export interface JoinRequest {
+  id: string;
+  lobbyId: string;
+  slotId: string;
+  userId: string;
+  status: "pending" | "accepted" | "rejected" | "cancelled";
+  player: PublicPlayer;
+  roleRequired: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface MyLobby extends Lobby {
+  myRole: "organizer" | "player";
+  mySlotId: string;
+  myPresenceStatus: string | null;
+  karmaPending: boolean;
+}
+
+export interface SportSkill {
+  sport: string;
+  gameLevel: string;
+  preferredRoles: string[];
+  updatedAt: string;
 }
 
 export interface GeoSuggestion {
@@ -83,12 +126,14 @@ export interface Passport {
     id: string;
     firstName: string;
     lastName: string | null;
+    photoUrl: string | null;
     reliabilityPct: number;
     gamesPlayed: number;
     gameLevel: string;
   };
   badges: Array<{ code: string; title: string; description: string }>;
   attendancePct: number;
+  sportSkills: SportSkill[];
 }
 
 export interface PaymentHold {
@@ -104,6 +149,7 @@ export interface RosterEntry {
   userId: string;
   firstName: string;
   lastName: string | null;
+  photoUrl: string | null;
   roleRequired: string | null;
   status: string;
 }
@@ -116,6 +162,7 @@ export const api = {
   },
   listLobbies(params?: {
     sport?: string;
+    gameLevel?: string;
     hotOnly?: boolean;
     nearbyOnly?: boolean;
     lat?: number;
@@ -123,12 +170,16 @@ export const api = {
   }) {
     const search = new URLSearchParams();
     if (params?.sport) search.set("sport", params.sport);
+    if (params?.gameLevel) search.set("gameLevel", params.gameLevel);
     if (params?.hotOnly) search.set("hotOnly", "true");
     if (params?.nearbyOnly) search.set("nearbyOnly", "true");
     if (params?.lat != null) search.set("lat", String(params.lat));
     if (params?.lng != null) search.set("lng", String(params.lng));
     const q = search.toString();
     return apiFetch<{ lobbies: Lobby[] }>(`/api/lobbies${q ? `?${q}` : ""}`);
+  },
+  listMyLobbies() {
+    return apiFetch<{ lobbies: MyLobby[] }>("/api/me/lobbies");
   },
   suggestPlaces(text: string, near?: { lat: number; lng: number }) {
     const search = new URLSearchParams({ text });
@@ -153,12 +204,7 @@ export const api = {
       `/api/geo/reverse?lat=${lat}&lng=${lng}`
     );
   },
-  async getStaticMap(
-    lat: number,
-    lng: number,
-    width = 640,
-    height = 280
-  ) {
+  async getStaticMap(lat: number, lng: number, width = 640, height = 280) {
     const search = new URLSearchParams({
       lat: String(lat),
       lng: String(lng),
@@ -195,9 +241,49 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
+  updateLobby(id: string, body: Record<string, unknown>) {
+    return apiFetch<{ lobby: Lobby }>(`/api/lobbies/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
   bookSlot(lobbyId: string, slotId: string) {
     return apiFetch<{ lobby: Lobby }>(
       `/api/lobbies/${lobbyId}/slots/${slotId}/book`,
+      { method: "POST" }
+    );
+  },
+  requestJoin(lobbyId: string, slotId: string) {
+    return apiFetch<{ request: JoinRequest }>(
+      `/api/lobbies/${lobbyId}/slots/${slotId}/request`,
+      { method: "POST" }
+    );
+  },
+  cancelJoinRequest(lobbyId: string) {
+    return apiFetch<{ ok: boolean }>(
+      `/api/lobbies/${lobbyId}/join-requests/me`,
+      { method: "DELETE" }
+    );
+  },
+  getMyJoinRequest(lobbyId: string) {
+    return apiFetch<{ request: JoinRequest | null }>(
+      `/api/lobbies/${lobbyId}/join-requests/me`
+    );
+  },
+  listJoinRequests(lobbyId: string) {
+    return apiFetch<{ requests: JoinRequest[] }>(
+      `/api/lobbies/${lobbyId}/join-requests`
+    );
+  },
+  acceptJoinRequest(lobbyId: string, requestId: string) {
+    return apiFetch<{ lobby: Lobby }>(
+      `/api/lobbies/${lobbyId}/join-requests/${requestId}/accept`,
+      { method: "POST" }
+    );
+  },
+  rejectJoinRequest(lobbyId: string, requestId: string) {
+    return apiFetch<{ ok: boolean }>(
+      `/api/lobbies/${lobbyId}/join-requests/${requestId}/reject`,
       { method: "POST" }
     );
   },
@@ -229,8 +315,29 @@ export const api = {
       userId ? `/api/passport/${userId}` : "/api/passport/me"
     );
   },
+  getSportSkill(sport: string) {
+    return apiFetch<{ skill: SportSkill | null }>(
+      `/api/passport/skills/${sport}`
+    );
+  },
+  saveSportSkill(
+    sport: string,
+    body: { gameLevel: string; preferredRoles: string[] }
+  ) {
+    return apiFetch<{ skill: SportSkill }>(`/api/passport/skills/${sport}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+  deleteSportSkill(sport: string) {
+    return apiFetch<{ ok: boolean }>(`/api/passport/skills/${sport}`, {
+      method: "DELETE",
+    });
+  },
   getRoster(lobbyId: string) {
-    return apiFetch<{ roster: RosterEntry[] }>(`/api/lobbies/${lobbyId}/roster`);
+    return apiFetch<{ roster: RosterEntry[] }>(
+      `/api/lobbies/${lobbyId}/roster`
+    );
   },
   confirmOnSite(slotId: string, position?: { lat: number; lng: number }) {
     return apiFetch<{ ok: boolean }>(`/api/presence/${slotId}/on-site`, {
@@ -331,6 +438,65 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
+  getKarmaStatus(lobbyId: string) {
+    return apiFetch<{
+      status: {
+        open: boolean;
+        remainingTargets: number;
+        votedTargetIds: string[];
+      };
+    }>(`/api/lobbies/${lobbyId}/karma/status`);
+  },
+};
+
+export const ROLE_OPTIONS: Record<string, string[]> = {
+  volleyball: ["Связующий", "Доигровщик", "Центральный блокирующий", "Либеро"],
+  mini_football: ["Вратарь", "Защитник", "Полузащитник", "Нападающий"],
+  basketball: ["Разыгрывающий", "Защитник", "Форвард", "Центровой"],
+  padel_tennis: ["Левый", "Правый"],
+  floorball: [
+    "Вратарь",
+    "Левый защитник",
+    "Правый защитник",
+    "Центральный нападающий",
+    "Левый нападающий",
+    "Правый нападающий",
+  ],
+  ice_hockey: [
+    "Вратарь",
+    "Левый защитник",
+    "Правый защитник",
+    "Центральный нападающий",
+    "Левый крайний",
+    "Правый крайний",
+  ],
+  water_polo: [
+    "Вратарь",
+    "Центральный нападающий",
+    "Центральный защитник",
+    "Левый край",
+    "Правый край",
+    "Подвижный нападающий",
+  ],
+  table_tennis: ["Одиночник", "Левый игрок пары", "Правый игрок пары"],
+  airsoft: [
+    "Командир",
+    "Штурмовик",
+    "Пулемётчик",
+    "Снайпер",
+    "Марксман",
+    "Медик",
+    "Гренадёр",
+    "Инженер",
+    "Радиооператор",
+  ],
+  paintball: [
+    "Фронтовой игрок",
+    "Игрок центра",
+    "Тыловой игрок",
+    "Снейк-игрок",
+    "Дорито-игрок",
+  ],
 };
 
 export const SPORT_LABELS: Record<string, string> = {
@@ -338,6 +504,12 @@ export const SPORT_LABELS: Record<string, string> = {
   mini_football: "Мини-футбол",
   basketball: "Баскетбол",
   padel_tennis: "Падел/Теннис",
+  floorball: "Флорбол",
+  ice_hockey: "Хоккей",
+  water_polo: "Водное поло",
+  table_tennis: "Настольный теннис",
+  airsoft: "Страйкбол",
+  paintball: "Пейнтбол",
 };
 
 export const LEVEL_LABELS: Record<string, string> = {

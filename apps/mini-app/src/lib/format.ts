@@ -62,13 +62,61 @@ export function initialsOf(firstName: string, lastName?: string | null) {
   return (first + second).toUpperCase();
 }
 
-/** Мест осталось, in the accusative forms Russian needs. */
+export type SlotCase =
+  | "nominative"
+  | "genitive"
+  | "accusative"
+  | "dative"
+  | "instrumental"
+  | "prepositional";
+
+const SLOT_FORMS: Record<SlotCase, [string, string, string]> = {
+  nominative: ["слот", "слота", "слотов"],
+  genitive: ["слота", "слотов", "слотов"],
+  accusative: ["слот", "слота", "слотов"],
+  dative: ["слоту", "слотам", "слотам"],
+  instrumental: ["слотом", "слотами", "слотами"],
+  prepositional: ["слоте", "слотах", "слотах"],
+};
+
+function slotPluralIndex(count: number): 0 | 1 | 2 {
+  const n = Math.abs(Math.trunc(count)) % 100;
+  const n1 = n % 10;
+  if (n > 10 && n < 20) return 2;
+  if (n1 === 1) return 0;
+  if (n1 >= 2 && n1 <= 4) return 1;
+  return 2;
+}
+
+export function slotWord(count = 1, form: SlotCase = "nominative"): string {
+  return SLOT_FORMS[form][slotPluralIndex(count)];
+}
+
+const SLOT_PLURAL: Record<SlotCase, string> = {
+  nominative: "слоты",
+  genitive: "слотов",
+  accusative: "слоты",
+  dative: "слотам",
+  instrumental: "слотами",
+  prepositional: "слотах",
+};
+
+/** Слово «слот» без числительного: «остальные слоты», «по слотам». */
+export function slotNoun(
+  plural = false,
+  form: SlotCase = "nominative"
+): string {
+  return plural ? SLOT_PLURAL[form] : SLOT_FORMS[form][0];
+}
+
+export function formatSlots(
+  count: number,
+  form: SlotCase = "nominative"
+): string {
+  return `${count} ${slotWord(count, form)}`;
+}
+
+/** Сколько слотов осталось свободными. */
 export function pluralSlots(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${count} место`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return `${count} места`;
-  }
-  return `${count} мест`;
+  return formatSlots(count, "nominative");
 }

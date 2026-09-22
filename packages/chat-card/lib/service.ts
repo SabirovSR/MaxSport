@@ -69,7 +69,11 @@ export function createChatCardService(
     },
 
     renderButtons(lobby) {
-      if (lobby.status === "cancelled" || lobby.status === "finished") {
+      if (
+        lobby.status === "cancelled" ||
+        lobby.status === "finished" ||
+        lobby.status === "started"
+      ) {
         return [];
       }
       if (lobby.status === "full") {
@@ -87,7 +91,10 @@ export function createChatCardService(
         [
           {
             type: "callback",
-            text: "⚡ Занять слот",
+            text:
+              lobby.joinMode === "approval"
+                ? "📨 Подать заявку"
+                : "⚡ Занять слот",
             payload: `book_slot:${lobby.id}`,
           },
           {

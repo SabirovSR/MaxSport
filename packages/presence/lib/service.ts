@@ -1,11 +1,17 @@
 import type { PresenceStatus, PresenceRecord } from "@maxsport/shared";
-import { ForbiddenError, NotFoundError, ValidationError, type Pool } from "@maxsport/shared";
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+  type Pool,
+} from "@maxsport/shared";
 
 export interface RosterEntry {
   slotId: string;
   userId: string;
   firstName: string;
   lastName: string | null;
+  photoUrl: string | null;
   roleRequired: string | null;
   status: PresenceStatus;
   updatedAt: Date;
@@ -47,7 +53,7 @@ export function createPresenceService(pool: Pool): PresenceService {
     async getRoster(lobbyId) {
       const result = await pool.query(
         `SELECT pr.slot_id, pr.user_id, pr.status, pr.updated_at,
-                u.first_name, u.last_name, s.role_required
+                u.first_name, u.last_name, u.photo_url, s.role_required
          FROM presence_records pr
          JOIN users u ON u.id = pr.user_id
          JOIN slots s ON s.id = pr.slot_id
@@ -62,6 +68,7 @@ export function createPresenceService(pool: Pool): PresenceService {
         userId: row.user_id as string,
         firstName: row.first_name as string,
         lastName: row.last_name as string | null,
+        photoUrl: row.photo_url as string | null,
         roleRequired: row.role_required as string | null,
         status: row.status as PresenceStatus,
         updatedAt: new Date(row.updated_at as string),
@@ -110,7 +117,9 @@ export function createPresenceService(pool: Pool): PresenceService {
       );
       if (!check.rows[0]) throw new NotFoundError("Явка");
       if (!check.rows[0].within) {
-        throw new ValidationError("Вы ещё не на площадке — или нажмите «Я на месте» вручную");
+        throw new ValidationError(
+          "Вы ещё не на площадке — или нажмите «Я на месте» вручную"
+        );
       }
       await this.confirmOnSite(slotId, userId);
     },
