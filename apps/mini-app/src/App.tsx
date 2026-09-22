@@ -35,8 +35,9 @@ export function App() {
 
   return (
     <ToastProvider>
-      <div className="page">
-        <header className="header">
+      <div className="app-shell">
+        <div className="page">
+          <header className="header">
           <Link to="/" className="logo">
             <Mark size={26} />
             MAX <span>Sport</span>
@@ -63,20 +64,21 @@ export function App() {
               </span>
             )}
           </Link>
-        </header>
+          </header>
 
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/lobby/:id" element={<LobbyPage />} />
-          <Route path="/lobby/:id/roster" element={<RosterPage />} />
-          <Route path="/lobby/:id/karma" element={<KarmaPage />} />
-          <Route path="/lobby/:id/edit" element={<EditLobbyPage />} />
-          <Route path="/create" element={<CreateLobbyPage />} />
-          <Route path="/passport" element={<PassportPage />} />
-          <Route path="/passport/:userId" element={<PassportPage />} />
-        </Routes>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/lobby/:id" element={<LobbyPage />} />
+            <Route path="/lobby/:id/roster" element={<RosterPage />} />
+            <Route path="/lobby/:id/karma" element={<KarmaPage />} />
+            <Route path="/lobby/:id/edit" element={<EditLobbyPage />} />
+            <Route path="/create" element={<CreateLobbyPage />} />
+            <Route path="/passport" element={<PassportPage />} />
+            <Route path="/passport/:userId" element={<PassportPage />} />
+          </Routes>
+        </div>
+        <TabBar />
       </div>
-      <TabBar />
     </ToastProvider>
   );
 }

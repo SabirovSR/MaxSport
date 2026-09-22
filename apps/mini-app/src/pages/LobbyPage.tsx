@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@maxhub/max-ui";
 import {
   api,
@@ -134,7 +134,7 @@ export function LobbyPage() {
       const result = await api.requestJoin(id, slotId);
       setMyRequest(result.request);
       setPicking(false);
-      showToast("Заявка отправлена Организатору");
+      showToast("Заявка отправлена организатору");
     } catch (cause) {
       const message =
         cause instanceof Error ? cause.message : "Не удалось отправить заявку";
@@ -268,7 +268,7 @@ export function LobbyPage() {
           title: "Покинуть состав?",
           description:
             "Слот снова станет свободным. При поздней отмене залог может быть удержан.",
-          confirmLabel: "Покинуть состав",
+          confirmLabel: "Покинуть",
           onConfirm: releaseMySlot,
         }
       : {
@@ -382,7 +382,7 @@ export function LobbyPage() {
         <div className="lobby-card">
           <h3>Заявка на рассмотрении</h3>
           <p className="card-meta">
-            Организатор увидит её в Ростере и подтвердит или отклонит.
+            Организатор увидит её в ростере и подтвердит или отклонит.
           </p>
           <div style={{ marginTop: "var(--ms-space-3)" }}>
             <Button
@@ -486,15 +486,8 @@ export function LobbyPage() {
             loading={busy}
             onClick={() => setPendingAction("release-slot")}
           >
-            Отменить запись
+            Покинуть
           </Button>
-        )}
-        {mySlot && isOrganizer && (
-          <Link to="/passport" style={{ flex: 1 }}>
-            <Button variant="primary" stretched>
-              Вы организатор
-            </Button>
-          </Link>
         )}
       </div>
 
@@ -503,7 +496,7 @@ export function LobbyPage() {
         onClose={() => setPicking(false)}
         label="Выбор амплуа"
       >
-        <h2 className="section-title">Какое Амплуа берёте?</h2>
+        <h2 className="section-title">Какое амплуа берёте?</h2>
         <p className="muted" style={{ marginTop: 0 }}>
           Свободно {pluralSlots(freeSlots.length)}.
         </p>

@@ -54,7 +54,7 @@ function LobbyCard({
             {lobby.venue.name}
             {distance ? `, ${distance}` : ""}
             {myLobby
-              ? ` · ${myLobby.myRole === "organizer" ? "Организатор" : "Игрок"}`
+              ? ` · ${myLobby.myRole === "organizer" ? "организатор" : "игрок"}`
               : ""}
           </p>
         </div>

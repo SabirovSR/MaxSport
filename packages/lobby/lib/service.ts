@@ -290,7 +290,7 @@ export function createLobbyService(
             !ROLE_OPTIONS[input.sport].includes(role)
         )
       ) {
-        throw new ValidationError("Некорректные Амплуа слотов");
+        throw new ValidationError("Некорректные амплуа слотов");
       }
 
       const venue = await venues.findById(input.venueId);
@@ -914,7 +914,7 @@ export function createLobbyService(
                 !ROLE_OPTIONS[lobby.sport].includes(role)
             )
           ) {
-            throw new ValidationError("Некорректные Амплуа слотов");
+            throw new ValidationError("Некорректные амплуа слотов");
           }
           const roleMap = new Map(
             patch.roleSlots.map((item) => [item.index, item.role])
@@ -927,7 +927,7 @@ export function createLobbyService(
                 (row.role_required ?? null)
           );
           if (occupiedRoleChange) {
-            throw new ValidationError("Нельзя изменить Амплуа занятого слота");
+            throw new ValidationError("Нельзя изменить амплуа занятого слота");
           }
           await client.query(
             `UPDATE slots SET role_required = NULL

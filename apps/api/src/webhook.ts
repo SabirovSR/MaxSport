@@ -62,7 +62,7 @@ export function registerWebhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
           type: "join_request",
           lobbyId,
         });
-        await ctx.reply("Заявка отправлена Организатору");
+        await ctx.reply("Заявка отправлена организатору");
         return;
       }
 
@@ -121,7 +121,7 @@ export function registerWebhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
     );
     if (freeRoles.size > 1) {
       await ctx.replyWithButtons(
-        "В лобби несколько свободных Амплуа. Какое берёте?",
+        "В лобби несколько свободных амплуа. Какое берёте?",
         freeSlots.map((slot) => ({
           label: slot.roleRequired ?? "Любое амплуа",
           callbackData: `book_role:${lobbyId}:${slot.id}`,
