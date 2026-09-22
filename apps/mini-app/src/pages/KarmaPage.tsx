@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@maxhub/max-ui";
 import { api, type Lobby, type RosterEntry } from "../api";
 import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
+import { useToast } from "../components/Toast";
 import { refreshMe, useMe } from "../lib/useMe";
 import { initialsOf } from "../lib/format";
 
@@ -11,6 +12,12 @@ const TAGS_BY_SPORT: Record<string, string[]> = {
   mini_football: ["надёжный вратарь", "точный пас", "быстрый форвард"],
   basketball: ["точный бросок", "жёсткая защита", "отличный пас"],
   padel_tennis: ["сильная подача", "точный удар", "хорошая игра у сетки"],
+  floorball: ["точный пас", "сильный бросок", "цепкая защита"],
+  ice_hockey: ["точный пас", "сильный бросок", "надёжная защита"],
+  water_polo: ["точная передача", "сильный бросок", "плотная защита"],
+  table_tennis: ["сильная подача", "точное вращение", "надёжный партнёр"],
+  airsoft: ["тактичный игрок", "точный стрелок", "надёжный напарник"],
+  paintball: ["быстрый прорыв", "точная стрельба", "командная игра"],
 };
 
 const RELIABILITY = [
@@ -31,6 +38,7 @@ function suggestedReliability(status: string): Reliability {
 export function KarmaPage() {
   const { id } = useParams<{ id: string }>();
   const { userId } = useMe();
+  const { showToast } = useToast();
   const [roster, setRoster] = useState<RosterEntry[] | null>(null);
   const [lobby, setLobby] = useState<Lobby | null>(null);
   const [voted, setVoted] = useState<Record<string, true>>({});
@@ -43,10 +51,15 @@ export function KarmaPage() {
   const load = useCallback(() => {
     if (!id) return;
     setError(null);
-    Promise.all([api.getRoster(id), api.getLobby(id)])
-      .then(([rosterData, lobbyData]) => {
+    Promise.all([api.getRoster(id), api.getLobby(id), api.getKarmaStatus(id)])
+      .then(([rosterData, lobbyData, statusData]) => {
         setRoster(rosterData.roster);
         setLobby(lobbyData.lobby);
+        setVoted(
+          Object.fromEntries(
+            statusData.status.votedTargetIds.map((targetId) => [targetId, true])
+          )
+        );
       })
       .catch((cause: Error) => setError(cause.message));
   }, [id]);
@@ -69,8 +82,12 @@ export function KarmaPage() {
       });
       refreshMe();
       setVoted((current) => ({ ...current, [entry.userId]: true }));
+      showToast("Оценка отправлена");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Не удалось отправить");
+      const message =
+        cause instanceof Error ? cause.message : "Не удалось отправить";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setBusy(null);
     }
@@ -114,15 +131,27 @@ export function KarmaPage() {
 
       {remaining.map((entry) => (
         <div key={entry.userId} className="lobby-card">
-          <div style={{ display: "flex", gap: "var(--ms-space-3)", alignItems: "center" }}>
-            <span className="avatar">
-              {initialsOf(entry.firstName, entry.lastName)}
-            </span>
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--ms-space-3)",
+              alignItems: "center",
+            }}
+          >
+            {entry.photoUrl ? (
+              <img className="avatar" src={entry.photoUrl} alt="" />
+            ) : (
+              <span className="avatar">
+                {initialsOf(entry.firstName, entry.lastName)}
+              </span>
+            )}
             <div>
               <strong>
                 {entry.firstName} {entry.lastName ?? ""}
               </strong>
-              <div className="muted">{entry.roleRequired ?? "Любое амплуа"}</div>
+              <div className="muted">
+                {entry.roleRequired ?? "Любое амплуа"}
+              </div>
             </div>
           </div>
 
@@ -171,7 +200,9 @@ export function KarmaPage() {
                             current[entry.userId]?.reliability ??
                             suggestedReliability(entry.status),
                           tag:
-                            current[entry.userId]?.tag === tag ? undefined : tag,
+                            current[entry.userId]?.tag === tag
+                              ? undefined
+                              : tag,
                         },
                       }))
                     }

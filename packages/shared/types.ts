@@ -1,6 +1,19 @@
-export type Sport = "volleyball" | "mini_football" | "basketball" | "padel_tennis";
+export type Sport =
+  | "volleyball"
+  | "mini_football"
+  | "basketball"
+  | "padel_tennis"
+  | "floorball"
+  | "ice_hockey"
+  | "water_polo"
+  | "table_tennis"
+  | "airsoft"
+  | "paintball";
 
 export type GameLevel = "novice" | "amateur" | "advanced";
+export type JoinMode = "instant" | "approval";
+export type JoinRequestStatus =
+  "pending" | "accepted" | "rejected" | "cancelled";
 
 export type LobbyStatus =
   | "draft"
@@ -12,11 +25,7 @@ export type LobbyStatus =
   | "cancelled";
 
 export type PresenceStatus =
-  | "expected"
-  | "on_the_way"
-  | "on_site"
-  | "no_show"
-  | "cancelled";
+  "expected" | "on_the_way" | "on_site" | "no_show" | "cancelled";
 
 export type PaymentHoldStatus =
   | "hold_pending"
@@ -48,6 +57,20 @@ export interface User {
   createdAt: Date;
 }
 
+export interface PublicPlayer {
+  id: string;
+  firstName: string;
+  lastName: string | null;
+  photoUrl: string | null;
+}
+
+export interface SportSkill {
+  sport: Sport;
+  gameLevel: GameLevel;
+  preferredRoles: string[];
+  updatedAt: Date;
+}
+
 export interface Venue {
   id: string;
   name: string;
@@ -65,6 +88,7 @@ export interface Slot {
   userId: string | null;
   version: number;
   index: number;
+  occupant: PublicPlayer | null;
 }
 
 export interface Lobby {
@@ -81,6 +105,7 @@ export interface Lobby {
   slotCount: number;
   cardMessageId: string | null;
   cardChatId: number | null;
+  joinMode: JoinMode;
   createdAt: Date;
 }
 
@@ -92,6 +117,25 @@ export interface LobbyWithDetails extends Lobby {
   splitPerPlayer: number;
   /** Metres from the caller's position. Absent when no position was supplied. */
   distanceM?: number;
+}
+
+export interface JoinRequest {
+  id: string;
+  lobbyId: string;
+  slotId: string;
+  userId: string;
+  status: JoinRequestStatus;
+  player: PublicPlayer;
+  roleRequired: string | null;
+  createdAt: Date;
+  resolvedAt: Date | null;
+}
+
+export interface MyLobbySummary extends LobbyWithDetails {
+  myRole: "organizer" | "player";
+  mySlotId: string;
+  myPresenceStatus: PresenceStatus | null;
+  karmaPending: boolean;
 }
 
 export interface PresenceRecord {

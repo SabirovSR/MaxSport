@@ -1,10 +1,22 @@
-import { ValidationError, type Pool } from "@maxsport/shared";
-import type { Badge, User } from "@maxsport/shared";
+import {
+  isSport,
+  normalizePreferredRoles,
+  ValidationError,
+  type Pool,
+} from "@maxsport/shared";
+import type {
+  Badge,
+  GameLevel,
+  Sport,
+  SportSkill,
+  User,
+} from "@maxsport/shared";
 
 export interface PassportView {
   user: User;
   badges: Badge[];
   attendancePct: number;
+  sportSkills: SportSkill[];
 }
 
 export interface KarmaService {
@@ -16,6 +28,21 @@ export interface KarmaService {
     tag?: string;
   }): Promise<void>;
   getPassport(userId: string): Promise<PassportView>;
+  getSportSkill(userId: string, sport: string): Promise<SportSkill | null>;
+  upsertSportSkill(
+    userId: string,
+    sport: string,
+    input: { gameLevel: GameLevel; preferredRoles: string[] }
+  ): Promise<SportSkill>;
+  deleteSportSkill(userId: string, sport: string): Promise<void>;
+  getKarmaStatus(
+    lobbyId: string,
+    userId: string
+  ): Promise<{
+    open: boolean;
+    remainingTargets: number;
+    votedTargetIds: string[];
+  }>;
   awardRescueBadge(userId: string, lobbyId: string): Promise<void>;
 }
 
@@ -34,11 +61,29 @@ function mapUser(row: Record<string, unknown>): User {
   };
 }
 
+function mapSkill(row: Record<string, unknown>): SportSkill {
+  return {
+    sport: row.sport as Sport,
+    gameLevel: row.game_level as GameLevel,
+    preferredRoles: (row.preferred_roles as string[]) ?? [],
+    updatedAt: new Date(row.updated_at as string),
+  };
+}
+
 export function createKarmaService(pool: Pool): KarmaService {
   return {
     async submitVote(input) {
       if (input.voterId === input.targetId) {
         throw new ValidationError("Нельзя голосовать за себя");
+      }
+      const lobby = await pool.query(
+        `SELECT status FROM lobbies WHERE id = $1`,
+        [input.lobbyId]
+      );
+      if (lobby.rows[0]?.status !== "finished") {
+        throw new ValidationError(
+          "Оценивать Игроков можно после завершения игры"
+        );
       }
       const voter = await pool.query(
         `SELECT 1 FROM slots WHERE lobby_id = $1 AND user_id = $2`,
@@ -78,17 +123,18 @@ export function createKarmaService(pool: Pool): KarmaService {
       const onTime = Number(stats.rows[0]?.on_time ?? 0);
       const total = Number(stats.rows[0]?.total ?? 0);
       const pct = total > 0 ? Math.round((onTime / total) * 100) : 100;
-      await pool.query(
-        `UPDATE users SET reliability_pct = $1 WHERE id = $2`,
-        [pct, input.targetId]
-      );
+      await pool.query(`UPDATE users SET reliability_pct = $1 WHERE id = $2`, [
+        pct,
+        input.targetId,
+      ]);
     },
 
     async getPassport(userId) {
       const userResult = await pool.query(`SELECT * FROM users WHERE id = $1`, [
         userId,
       ]);
-      if (!userResult.rows[0]) throw new ValidationError("Пользователь не найден");
+      if (!userResult.rows[0])
+        throw new ValidationError("Пользователь не найден");
 
       const badgesResult = await pool.query(
         `SELECT b.id, b.code, b.title, b.description
@@ -109,6 +155,13 @@ export function createKarmaService(pool: Pool): KarmaService {
       const total = Number(presenceStats.rows[0]?.total ?? 0);
       const attendancePct =
         total > 0 ? Math.round((onSite / total) * 100) : 100;
+      const skillsResult = await pool.query(
+        `SELECT sport, game_level, preferred_roles, updated_at
+         FROM user_sport_skills
+         WHERE user_id = $1
+         ORDER BY sport`,
+        [userId]
+      );
 
       return {
         user: mapUser(userResult.rows[0]),
@@ -119,6 +172,97 @@ export function createKarmaService(pool: Pool): KarmaService {
           description: row.description as string,
         })),
         attendancePct,
+        sportSkills: skillsResult.rows.map(mapSkill),
+      };
+    },
+
+    async getSportSkill(userId, sportValue) {
+      if (!isSport(sportValue)) {
+        throw new ValidationError("Неизвестный вид спорта");
+      }
+      const result = await pool.query(
+        `SELECT sport, game_level, preferred_roles, updated_at
+         FROM user_sport_skills
+         WHERE user_id = $1 AND sport = $2`,
+        [userId, sportValue]
+      );
+      return result.rows[0] ? mapSkill(result.rows[0]) : null;
+    },
+
+    async upsertSportSkill(userId, sportValue, input) {
+      if (!isSport(sportValue)) {
+        throw new ValidationError("Неизвестный вид спорта");
+      }
+      if (!["novice", "amateur", "advanced"].includes(input.gameLevel)) {
+        throw new ValidationError("Некорректный уровень игры");
+      }
+      const preferredRoles = normalizePreferredRoles(
+        sportValue,
+        input.preferredRoles
+      );
+      if (!preferredRoles) {
+        throw new ValidationError(
+          "Выберите не более четырёх допустимых Амплуа"
+        );
+      }
+      const result = await pool.query(
+        `INSERT INTO user_sport_skills
+         (user_id, sport, game_level, preferred_roles)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, sport) DO UPDATE SET
+           game_level = EXCLUDED.game_level,
+           preferred_roles = EXCLUDED.preferred_roles,
+           updated_at = NOW()
+         RETURNING sport, game_level, preferred_roles, updated_at`,
+        [userId, sportValue, input.gameLevel, preferredRoles]
+      );
+      return mapSkill(result.rows[0]!);
+    },
+
+    async deleteSportSkill(userId, sportValue) {
+      if (!isSport(sportValue)) {
+        throw new ValidationError("Неизвестный вид спорта");
+      }
+      await pool.query(
+        `DELETE FROM user_sport_skills WHERE user_id = $1 AND sport = $2`,
+        [userId, sportValue]
+      );
+    },
+
+    async getKarmaStatus(lobbyId, userId) {
+      const lobby = await pool.query(
+        `SELECT status FROM lobbies WHERE id = $1`,
+        [lobbyId]
+      );
+      if (!lobby.rows[0]) throw new ValidationError("Лобби не найдено");
+      const membership = await pool.query(
+        `SELECT 1 FROM slots WHERE lobby_id = $1 AND user_id = $2`,
+        [lobbyId, userId]
+      );
+      if (!membership.rows[0]) {
+        return { open: false, remainingTargets: 0, votedTargetIds: [] };
+      }
+      const targets = await pool.query(
+        `SELECT s.user_id,
+                EXISTS (
+                  SELECT 1 FROM karma_votes kv
+                  WHERE kv.lobby_id = $1
+                    AND kv.voter_id = $2
+                    AND kv.target_id = s.user_id
+                ) AS voted
+         FROM slots s
+         WHERE s.lobby_id = $1
+           AND s.user_id IS NOT NULL
+           AND s.user_id <> $2`,
+        [lobbyId, userId]
+      );
+      const votedTargetIds = targets.rows
+        .filter((row) => row.voted)
+        .map((row) => row.user_id as string);
+      return {
+        open: lobby.rows[0].status === "finished",
+        remainingTargets: targets.rows.length - votedTargetIds.length,
+        votedTargetIds,
       };
     },
 

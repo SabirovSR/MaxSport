@@ -32,10 +32,7 @@ type CallbackCtx = {
   ) => Promise<void>;
 };
 
-export function registerWebhookRoutes(
-  app: FastifyInstance,
-  deps: WebhookDeps
-) {
+export function registerWebhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
   async function publishLobby(lobbyId: string, lobby?: LobbyWithDetails) {
     const updated = lobby ?? (await deps.lobbies.getById(lobbyId));
     await deps.realtime.publishLobbyUpdate(lobbyId, updated);
@@ -59,13 +56,25 @@ export function registerWebhookRoutes(
         lobby.startAt.getTime() - Date.now() < 3 * 60 * 60 * 1000 &&
         lobby.filledCount >= lobby.slotCount - 1;
 
+      if (lobby.joinMode === "approval") {
+        await deps.lobbies.requestJoin(lobbyId, slotId, user.id);
+        await deps.realtime.publishLobbyUpdate(lobbyId, {
+          type: "join_request",
+          lobbyId,
+        });
+        await ctx.reply("Заявка отправлена Организатору");
+        return;
+      }
+
       const updated = await deps.lobbies.bookSlot(lobbyId, slotId, user.id);
       await deps.chatCard.syncCard(lobbyId);
       await publishLobby(lobbyId, updated);
       if (wasHot) {
         await deps.karma.awardRescueBadge(user.id, lobbyId);
       }
-      await ctx.reply(`Слот занят! ${updated.filledCount}/${updated.slotCount}`);
+      await ctx.reply(
+        `Слот занят! ${updated.filledCount}/${updated.slotCount}`
+      );
     } catch (error) {
       const message =
         error instanceof DomainError ? error.message : "Не удалось занять слот";
@@ -102,7 +111,7 @@ export function registerWebhookRoutes(
 
     const freeSlots = lobby.slots.filter((s) => !s.userId);
     if (freeSlots.length === 0) {
-      await ctx.reply("Все Слоты заняты");
+      await ctx.reply("Все слоты заняты");
       return;
     }
 
@@ -145,7 +154,9 @@ export function registerWebhookRoutes(
       await ctx.reply("Отлично, ждём на площадке!");
     } catch (error) {
       const message =
-        error instanceof DomainError ? error.message : "Не удалось отметить явку";
+        error instanceof DomainError
+          ? error.message
+          : "Не удалось отметить явку";
       await ctx.reply(message);
     }
   });
@@ -163,7 +174,9 @@ export function registerWebhookRoutes(
       await ctx.reply("Слот освобождён. До встречи!");
     } catch (error) {
       const message =
-        error instanceof DomainError ? error.message : "Не удалось освободить слот";
+        error instanceof DomainError
+          ? error.message
+          : "Не удалось освободить слот";
       await ctx.reply(message);
     }
   });
@@ -179,7 +192,9 @@ export function registerWebhookRoutes(
       await ctx.reply("Явка отмечена. Хорошей игры!");
     } catch (error) {
       const message =
-        error instanceof DomainError ? error.message : "Не удалось отметить явку";
+        error instanceof DomainError
+          ? error.message
+          : "Не удалось отметить явку";
       await ctx.reply(message);
     }
   });

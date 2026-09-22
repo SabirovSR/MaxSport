@@ -15,4 +15,11 @@ export default defineConfig({
       "/healthz": "http://localhost:3000",
     },
   },
+  preview: {
+    port: 4173,
+    proxy: {
+      "/api": "http://localhost:3000",
+      "/healthz": "http://localhost:3000",
+    },
+  },
 });
