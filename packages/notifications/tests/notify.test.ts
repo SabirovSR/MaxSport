@@ -88,3 +88,29 @@ describe("notify join request", () => {
     expect(payload.buttons?.[0]?.[0]?.url).toContain("startapp=roster_lobby-1");
   });
 });
+
+describe("notify contact", () => {
+  it("lets any player ping the organizer", async () => {
+    const sendMessage = vi.fn(async () => ({ messageId: "m1" }));
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes("SELECT organizer_id FROM lobbies")) {
+        return { rows: [{ organizer_id: "org-1" }] };
+      }
+      if (sql.includes("SELECT first_name")) {
+        return { rows: [{ first_name: "Иван", last_name: null }] };
+      }
+      if (sql.includes("SELECT max_user_id")) {
+        return { rows: [{ max_user_id: 77 }] };
+      }
+      throw new Error(`Unexpected query: ${sql}`);
+    });
+    const scheduler = createNotificationScheduler(
+      { query } as unknown as Pool,
+      { sendMessage } as unknown as MaxApiClient
+    );
+
+    await scheduler.notifyContact("lobby-1", "player-1");
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage.mock.calls[0]![0].userId).toBe(77);
+  });
+});
