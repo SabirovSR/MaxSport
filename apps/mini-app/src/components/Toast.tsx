@@ -11,7 +11,6 @@ import {
 type ToastKind = "success" | "error" | "info";
 
 interface ToastItem {
-  id: number;
   message: string;
   kind: ToastKind;
 }
@@ -23,16 +22,14 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const nextId = useRef(0);
+  const [toast, setToast] = useState<ToastItem | null>(null);
+  const timer = useRef(0);
 
   const showToast = useCallback(
     (message: string, kind: ToastKind = "success") => {
-      const id = ++nextId.current;
-      setToasts((current) => [...current, { id, message, kind }]);
-      window.setTimeout(() => {
-        setToasts((current) => current.filter((toast) => toast.id !== id));
-      }, 3200);
+      window.clearTimeout(timer.current);
+      setToast({ message, kind });
+      timer.current = window.setTimeout(() => setToast(null), 3200);
     },
     []
   );
@@ -43,11 +40,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div className="toast-region" aria-live="polite" aria-atomic="true">
-        {toasts.map((toast) => (
-          <div key={toast.id} className={`toast toast-${toast.kind}`}>
-            {toast.message}
-          </div>
-        ))}
+        {toast ? (
+          <div className={`toast toast-${toast.kind}`}>{toast.message}</div>
+        ) : null}
       </div>
     </ToastContext.Provider>
   );

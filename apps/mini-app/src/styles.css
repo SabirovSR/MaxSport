@@ -1030,13 +1030,7 @@ body {
   bottom: 4.5rem;
   display: grid;
   justify-items: center;
-  gap: var(--ms-space-2);
   pointer-events: none;
-}
-
-body:has(.sheet) .toast-region {
-  top: var(--ms-space-4);
-  bottom: auto;
 }
 
 .toast {
