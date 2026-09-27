@@ -28,7 +28,11 @@ import {
   lobbyShareText,
   openLobbyShare,
 } from "../lib/lobbyShare";
-import { openMaxChat } from "../lib/maxContact";
+import {
+  contactShareText,
+  openMaxChat,
+  shareContactMessage,
+} from "../lib/maxContact";
 
 const HOLD_LABELS: Record<string, string> = {
   hold_pending: "Ожидает залог",
@@ -194,11 +198,24 @@ export function LobbyPage() {
     if (!id || !lobby) return;
     setBusy(true);
     try {
-      await api.contactLobby(id);
+      let botUsername = "gov_max_sport_bot";
+      try {
+        const config = await api.getConfig();
+        if (config.botUsername) botUsername = config.botUsername;
+      } catch {
+        // без конфига всё равно соберём ссылку
+      }
+      const link = lobbyDeepLink(botUsername, id);
+      const text = contactShareText(link);
+      void api.contactLobby(id).catch(() => undefined);
       openMaxChat({ username: lobby.organizer.username });
-      showToast("Организатору отправлено сообщение в бот");
+      const shared = await shareContactMessage(text, link);
+      showToast(
+        shared
+          ? "Выберите чат с организатором"
+          : "Текст скопирован — отправьте его организатору"
+      );
     } catch (cause) {
-      if (openMaxChat({ username: lobby.organizer.username })) return;
       const message =
         cause instanceof Error
           ? cause.message

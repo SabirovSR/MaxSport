@@ -7,7 +7,12 @@ import { PlayerChip } from "../components/PlayerChip";
 import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
 import { useToast } from "../components/Toast";
 import { useMe } from "../lib/useMe";
-import { openMaxChat } from "../lib/maxContact";
+import {
+  contactShareText,
+  openMaxChat,
+  shareContactMessage,
+} from "../lib/maxContact";
+import { lobbyDeepLink } from "../lib/lobbyShare";
 import { markableStatuses } from "../lib/presenceActions";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -121,11 +126,24 @@ export function RosterPage() {
     if (!id) return;
     setBusy(true);
     try {
-      await api.contactLobby(id, entry.userId);
+      let botUsername = "gov_max_sport_bot";
+      try {
+        const config = await api.getConfig();
+        if (config.botUsername) botUsername = config.botUsername;
+      } catch {
+        // без конфига всё равно соберём ссылку
+      }
+      const link = lobbyDeepLink(botUsername, id);
+      const text = contactShareText(link);
+      void api.contactLobby(id, entry.userId).catch(() => undefined);
       openMaxChat({ username: entry.username });
-      showToast("Игроку отправлено сообщение в бот");
+      const shared = await shareContactMessage(text, link);
+      showToast(
+        shared
+          ? "Выберите чат с игроком"
+          : "Текст скопирован — отправьте его игроку"
+      );
     } catch (cause) {
-      if (openMaxChat({ username: entry.username })) return;
       const message =
         cause instanceof Error ? cause.message : "Не удалось открыть чат";
       showToast(message, "error");
