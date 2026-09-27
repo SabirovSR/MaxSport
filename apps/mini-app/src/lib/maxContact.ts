@@ -24,20 +24,20 @@ export function openMaxChat(contact: MaxContact): boolean {
   return true;
 }
 
-export function contactShareText(link: string): string {
-  return `Привет! Пишу по игре в MAX Sport.\n${link}`;
+export function contactShareText(): string {
+  return "Привет! Пишу по игре в MAX Sport.";
 }
 
 export async function shareContactMessage(
   text: string,
   link: string
 ): Promise<boolean> {
-  await copyText(text);
+  await copyText(`${text}\n${link}`);
   if (window.WebApp?.shareMaxContent) {
     window.WebApp.shareMaxContent({ text, link });
     return true;
   }
-  const url = maxShareUrl(text);
+  const url = maxShareUrl(`${text}\n${link}`);
   if (window.WebApp?.openMaxLink) {
     window.WebApp.openMaxLink(url);
     return true;

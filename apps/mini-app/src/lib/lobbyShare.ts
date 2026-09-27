@@ -11,9 +11,8 @@ export function lobbyShareText(input: {
   sport: string;
   when: string;
   venue: string;
-  link: string;
 }): string {
-  return `${input.sport} • ${input.when}\n${input.venue}\n${input.link}`;
+  return `${input.sport} • ${input.when}\n${input.venue}`;
 }
 
 export async function copyText(value: string): Promise<boolean> {
@@ -60,7 +59,7 @@ export async function openLobbyShare(input: {
     return copied ? "clipboard" : "content";
   }
 
-  const url = maxShareUrl(input.text);
+  const url = maxShareUrl(`${input.text}\n${input.link}`);
   if (window.WebApp?.openMaxLink) {
     window.WebApp.openMaxLink(url);
     return copied ? "clipboard" : "deeplink";

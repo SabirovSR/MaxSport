@@ -134,7 +134,7 @@ export function RosterPage() {
         // без конфига всё равно соберём ссылку
       }
       const link = lobbyDeepLink(botUsername, id);
-      const text = contactShareText(link);
+      const text = contactShareText();
       void api.contactLobby(id, entry.userId).catch(() => undefined);
       openMaxChat({ username: entry.username });
       const shared = await shareContactMessage(text, link);
