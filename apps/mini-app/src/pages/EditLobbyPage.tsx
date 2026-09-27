@@ -6,6 +6,7 @@ import { LobbyComposeFields } from "../components/LobbyComposeFields";
 import { useToast } from "../components/Toast";
 import { VenuePicker, type ResolvedVenue } from "../components/VenuePicker";
 import { CardSkeleton, ErrorState } from "../components/States";
+import { roleSlotsFromPicks } from "../lib/roleVisual";
 
 function toLocalInput(value: string) {
   const date = new Date(value);
@@ -81,10 +82,7 @@ export function EditLobbyPage() {
         rentTotal,
         depositEnabled: rentTotal > 0 && depositEnabled,
         joinMode,
-        roleSlots: roles.map((role, offset) => ({
-          index: slotCount - 1 - offset,
-          role,
-        })),
+        roleSlots: roleSlotsFromPicks(roles, slotCount),
       });
       showToast("Изменения лобби сохранены");
       navigate(`/lobby/${id}`, { replace: true });
@@ -153,7 +151,12 @@ export function EditLobbyPage() {
         <Button
           variant="primary"
           loading={busy}
-          disabled={busy || !venue || slotCount < 2 || roles.length > slotCount}
+          disabled={
+            busy ||
+            !venue ||
+            slotCount < 2 ||
+            roles.length > Math.max(0, slotCount - 1)
+          }
           onClick={submit}
         >
           Сохранить

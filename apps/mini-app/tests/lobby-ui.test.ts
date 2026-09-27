@@ -14,6 +14,11 @@ import {
 import { contactShareText, maxProfileUrl } from "../src/lib/maxContact";
 import { markableStatuses } from "../src/lib/presenceActions";
 import { parentPath } from "../src/lib/useBackButton";
+import {
+  missingRoleCounts,
+  roleMarkKind,
+  roleSlotsFromPicks,
+} from "../src/lib/roleVisual";
 import { sortLobbies } from "../src/lib/lobbySort";
 
 function lobby(
@@ -180,6 +185,30 @@ describe("presence mark rights", () => {
         current: "expected",
       })
     ).toEqual(["on_the_way", "on_site"]);
+  });
+});
+
+describe("needed roles", () => {
+  it("maps picks to empty seats and never the organizer slot", () => {
+    expect(roleSlotsFromPicks(["Защитник", "Защитник", "Вратарь"], 4)).toEqual([
+      { index: 3, role: "Защитник" },
+      { index: 2, role: "Защитник" },
+      { index: 1, role: "Вратарь" },
+    ]);
+    expect(roleSlotsFromPicks(["Снайпер", "Пулемётчик"], 2)).toEqual([
+      { index: 1, role: "Снайпер" },
+    ]);
+    expect(roleMarkKind("Снайпер")).toBe("rifle");
+    expect(roleMarkKind("Медик")).toBe("medic");
+    expect(roleMarkKind(null)).toBe("player");
+    expect(
+      missingRoleCounts([
+        { userId: "org", roleRequired: "Снайпер" },
+        { userId: null, roleRequired: "Пулемётчик" },
+        { userId: null, roleRequired: "Пулемётчик" },
+        { userId: null, roleRequired: null },
+      ])
+    ).toEqual([{ role: "Пулемётчик", count: 2 }]);
   });
 });
 

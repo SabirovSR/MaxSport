@@ -253,6 +253,12 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
+  changeSlotRole(lobbyId: string, slotId: string, role: string | null) {
+    return apiFetch<{ lobby: Lobby }>(
+      `/api/lobbies/${lobbyId}/slots/${slotId}/role`,
+      { method: "PATCH", body: JSON.stringify({ role }) }
+    );
+  },
   bookSlot(lobbyId: string, slotId: string) {
     return apiFetch<{ lobby: Lobby }>(
       `/api/lobbies/${lobbyId}/slots/${slotId}/book`,

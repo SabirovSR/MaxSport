@@ -1,5 +1,6 @@
 import type { Lobby } from "../api";
 import { initialsOf } from "../lib/format";
+import { RoleMark } from "./RoleMark";
 
 export function SlotMatrix({
   slots,
@@ -36,9 +37,12 @@ export function SlotMatrix({
               <img src={slot.occupant.photoUrl} alt="" />
             ) : slot.occupant ? (
               initialsOf(slot.occupant.firstName, slot.occupant.lastName)
-            ) : !compact && slot.roleRequired ? (
-              slot.roleRequired.slice(0, 3)
-            ) : null}
+            ) : (
+              <RoleMark
+                role={slot.roleRequired}
+                title={slot.roleRequired ?? "Игрок"}
+              />
+            )}
           </div>
         );
       })}

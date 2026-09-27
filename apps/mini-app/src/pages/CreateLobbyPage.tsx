@@ -7,6 +7,7 @@ import { VenuePicker, type ResolvedVenue } from "../components/VenuePicker";
 import { useToast } from "../components/Toast";
 import { useGeolocation } from "../lib/useGeolocation";
 import { rememberSport } from "../lib/format";
+import { roleSlotsFromPicks } from "../lib/roleVisual";
 
 const STEPS = ["Игра", "Площадка", "Состав"] as const;
 
@@ -62,7 +63,7 @@ export function CreateLobbyPage() {
   const stepValid = [
     Boolean(sport && gameLevel && startAt),
     venue !== null,
-    slotCount >= 2 && roles.length <= slotCount,
+    slotCount >= 2 && roles.length <= Math.max(0, slotCount - 1),
   ];
 
   async function submit() {
@@ -96,11 +97,7 @@ export function CreateLobbyPage() {
         depositEnabled: rentTotal > 0 && depositEnabled,
         joinMode,
         startAt: new Date(startAt).toISOString(),
-        // нужные амплуа в конце, первые слоты свободные
-        roleSlots: roles.map((role, offset) => ({
-          index: slotCount - 1 - offset,
-          role,
-        })),
+        roleSlots: roleSlotsFromPicks(roles, slotCount),
       });
       rememberSport(sport);
       showToast("Лобби опубликовано");

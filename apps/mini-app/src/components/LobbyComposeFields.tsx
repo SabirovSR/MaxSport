@@ -1,5 +1,6 @@
 import { LEVEL_LABELS, ROLE_OPTIONS } from "../api";
 import { formatMoney, formatSlots, parseCount, slotNoun } from "../lib/format";
+import { RoleMark } from "./RoleMark";
 
 export interface LobbyComposeValues {
   gameLevel: string;
@@ -26,12 +27,17 @@ export function LobbyComposeFields({
   const split =
     values.slotCount > 0 ? Math.ceil(values.rentTotal / values.slotCount) : 0;
 
-  function toggleRole(role: string) {
-    onChange({
-      roles: values.roles.includes(role)
-        ? values.roles.filter((item) => item !== role)
-        : [...values.roles, role],
-    });
+  const maxRoles = Math.max(0, values.slotCount - 1);
+
+  function addRole(role: string) {
+    if (values.roles.length >= maxRoles) return;
+    onChange({ roles: [...values.roles, role] });
+  }
+
+  function removeRole(role: string) {
+    const index = values.roles.lastIndexOf(role);
+    if (index < 0) return;
+    onChange({ roles: values.roles.filter((_, item) => item !== index) });
   }
 
   return (
@@ -75,22 +81,44 @@ export function LobbyComposeFields({
 
       <div className="form-group">
         <label>Нужные амплуа</label>
-        <div className="chips">
-          {(ROLE_OPTIONS[sport] ?? []).map((role) => (
-            <button
-              key={role}
-              type="button"
-              className="chip"
-              aria-pressed={values.roles.includes(role)}
-              onClick={() => toggleRole(role)}
-            >
-              {role}
-            </button>
-          ))}
+        <div className="role-pick">
+          {(ROLE_OPTIONS[sport] ?? []).map((role) => {
+            const count = values.roles.filter((item) => item === role).length;
+            return (
+              <div key={role} className="role-pick-row">
+                <span className="role-pick-label">
+                  <span className="slot-role-icon">
+                    <RoleMark role={role} />
+                  </span>
+                  {role}
+                  {count > 0 ? ` ×${count}` : ""}
+                </span>
+                <span className="role-pick-stepper">
+                  <button
+                    type="button"
+                    className="chip"
+                    disabled={count === 0}
+                    onClick={() => removeRole(role)}
+                  >
+                    −
+                  </button>
+                  <button
+                    type="button"
+                    className="chip"
+                    aria-pressed={count > 0}
+                    disabled={values.roles.length >= maxRoles}
+                    onClick={() => addRole(role)}
+                  >
+                    +
+                  </button>
+                </span>
+              </div>
+            );
+          })}
         </div>
         <p className="form-hint">
-          Отмеченные амплуа станут отдельными {slotNoun(true, "instrumental")}.
-          Остальные {slotNoun(true)} открыты для любого.
+          Можно несколько одинаковых амплуа. Одно место ваше, роли — для
+          остальных {slotNoun(true, "genitive")}.
         </p>
       </div>
 

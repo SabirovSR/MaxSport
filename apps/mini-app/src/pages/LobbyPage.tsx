@@ -4,6 +4,7 @@ import { Button } from "@maxhub/max-ui";
 import {
   api,
   LEVEL_LABELS,
+  ROLE_OPTIONS,
   SPORT_LABELS,
   type JoinRequest,
   type Lobby,
@@ -23,6 +24,7 @@ import {
   pluralSlots,
 } from "../lib/format";
 import { canEditLobby, canJoinLobby, canRateLobby } from "../lib/lobbyActions";
+import { RoleMark } from "../components/RoleMark";
 import {
   lobbyDeepLink,
   lobbyShareText,
@@ -77,6 +79,7 @@ export function LobbyPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [pickingRole, setPickingRole] = useState(false);
   const [staticMapUrl, setStaticMapUrl] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [myRequest, setMyRequest] = useState<JoinRequest | null>(null);
@@ -307,6 +310,26 @@ export function LobbyPage() {
     }
   }
 
+  async function changeMyRole(role: string | null) {
+    if (!id || !lobby) return;
+    const slot = lobby.slots.find((item) => item.userId === userId);
+    if (!slot) return;
+    setBusy(true);
+    try {
+      const { lobby: updated } = await api.changeSlotRole(id, slot.id, role);
+      setLobby(updated);
+      setPickingRole(false);
+      showToast("Роль обновлена");
+    } catch (cause) {
+      const message =
+        cause instanceof Error ? cause.message : "Не удалось сменить роль";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function cancelLobby() {
     if (!id) return;
     setBusy(true);
@@ -376,7 +399,11 @@ export function LobbyPage() {
         {SPORT_LABELS[lobby.sport] ?? lobby.sport},{" "}
         {formatStartAt(lobby.startAt)}
       </h2>
-      <LobbyStatusBadge status={lobby.status} />
+      <div
+        className={lobby.status === "started" ? "lobby-live-status" : undefined}
+      >
+        <LobbyStatusBadge status={lobby.status} />
+      </div>
 
       <section className="venue-block">
         {staticMapUrl && (
@@ -417,9 +444,22 @@ export function LobbyPage() {
             key={slot.id}
             className={`slot-row ${!slot.userId ? "is-open" : ""}`}
           >
-            <span>
+            <span className="slot-role">
+              <span className="slot-role-icon">
+                <RoleMark role={slot.roleRequired} />
+              </span>
               {slot.roleRequired ?? `Слот ${slot.index + 1}`}
               {slot.userId === userId && " (вы)"}
+              {slot.userId === userId && canEditLobby(lobby.status) && (
+                <button
+                  type="button"
+                  className="chip"
+                  disabled={busy}
+                  onClick={() => setPickingRole(true)}
+                >
+                  сменить
+                </button>
+              )}
             </span>
             {slot.userId ? (
               slot.occupant ? (
@@ -596,7 +636,12 @@ export function LobbyPage() {
         <div className="slot-list">
           {freeSlots.map((slot) => (
             <div key={slot.id} className="slot-row is-open">
-              <span>{slot.roleRequired ?? "Любое амплуа"}</span>
+              <span className="slot-role">
+                <span className="slot-role-icon">
+                  <RoleMark role={slot.roleRequired} />
+                </span>
+                {slot.roleRequired ?? "Любое амплуа"}
+              </span>
               <Button
                 size="small"
                 loading={busy}
@@ -609,6 +654,40 @@ export function LobbyPage() {
                 Выбрать
               </Button>
             </div>
+          ))}
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={pickingRole}
+        onClose={() => setPickingRole(false)}
+        label="Смена роли"
+      >
+        <h2 className="section-title">Какую роль берёте?</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Это ваше амплуа в составе. Нужные слоты для других не меняются.
+        </p>
+        <div className="chips">
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={!mySlot?.roleRequired}
+            disabled={busy}
+            onClick={() => void changeMyRole(null)}
+          >
+            Любое амплуа
+          </button>
+          {(ROLE_OPTIONS[lobby.sport] ?? []).map((role) => (
+            <button
+              key={role}
+              type="button"
+              className="chip"
+              aria-pressed={mySlot?.roleRequired === role}
+              disabled={busy}
+              onClick={() => void changeMyRole(role)}
+            >
+              <RoleMark role={role} /> {role}
+            </button>
           ))}
         </div>
       </Sheet>
