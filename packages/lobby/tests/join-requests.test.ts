@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Pool } from "@maxsport/shared";
-import { SlotTakenError, ValidationError } from "@maxsport/shared";
+import {
+  ForbiddenError,
+  SlotTakenError,
+  ValidationError,
+} from "@maxsport/shared";
 import type { VenueRepository } from "@maxsport/venue";
 import { createLobbyService } from "../index.js";
 
@@ -231,6 +235,48 @@ describe("join requests", () => {
         roleSlots: [{ index: 0, role: "Либеро" }],
       })
     ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("lets an occupant change their own role", async () => {
+    const occupied = {
+      id: "slot-1",
+      lobby_id: "lobby-1",
+      role_required: "Связующий",
+      user_id: "organizer-1",
+      version: 0,
+      slot_index: 0,
+      occupant_first_name: "Организатор",
+      occupant_last_name: null,
+      occupant_photo_url: null,
+    };
+    let nextRole = occupied.role_required;
+    const query = vi.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("FROM lobbies l")) return { rows: [lobbyRow] };
+      if (sql.includes("FROM slots s") && sql.includes("LEFT JOIN users")) {
+        return { rows: [{ ...occupied, role_required: nextRole }, freeSlot] };
+      }
+      if (sql.includes("UPDATE slots SET role_required")) {
+        nextRole = params?.[0] as string;
+        return { rows: [] };
+      }
+      throw new Error(`Unexpected query: ${sql}`);
+    });
+    const service = createLobbyService(
+      { query } as unknown as Pool,
+      {} as VenueRepository
+    );
+
+    const updated = await service.changeSlotRole(
+      "lobby-1",
+      "slot-1",
+      "organizer-1",
+      "Либеро"
+    );
+    expect(updated.slots[0]?.roleRequired).toBe("Либеро");
+
+    await expect(
+      service.changeSlotRole("lobby-1", "slot-1", "stranger", "Доигровщик")
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it("rejects a duplicate active event at the same venue and time", async () => {

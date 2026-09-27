@@ -313,6 +313,26 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
     }
   );
 
+  app.patch("/api/lobbies/:id/slots/:slotId/role", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id, slotId } = request.params as { id: string; slotId: string };
+      const body = request.body as { role?: string | null };
+      const lobby = await deps.lobbies.changeSlotRole(
+        id,
+        slotId,
+        user.id,
+        body.role ?? null
+      );
+      await deps.chatCard.syncCard(id);
+      await deps.realtime.publishLobbyUpdate(id, lobby);
+      return reply.send({ lobby });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
   app.delete("/api/lobbies/:id/slots/:slotId", async (request, reply) => {
     try {
       const user = await requireAuth(request, deps.pool, deps.botToken);

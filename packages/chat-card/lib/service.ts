@@ -28,10 +28,19 @@ function progressBar(filled: number, total: number): string {
   return "█".repeat(filledBlocks) + "░".repeat(width - filledBlocks);
 }
 
-function urgentRole(lobby: LobbyWithDetails): string | null {
-  const open = lobby.slots.filter((s) => !s.userId && s.roleRequired);
+function neededLine(lobby: LobbyWithDetails): string | null {
+  const open = lobby.slots.filter((slot) => !slot.userId);
   if (!open.length) return null;
-  return open[0]!.roleRequired;
+  const counts = new Map<string, number>();
+  for (const slot of open) {
+    if (!slot.roleRequired) continue;
+    counts.set(slot.roleRequired, (counts.get(slot.roleRequired) ?? 0) + 1);
+  }
+  if (counts.size === 0) return "Требуются игроки";
+  const details = [...counts.entries()]
+    .map(([role, count]) => (count > 1 ? `${role} ×${count}` : role))
+    .join(", ");
+  return `Требуются игроки: ${details}`;
 }
 
 export function createChatCardService(
@@ -47,15 +56,15 @@ export function createChatCardService(
       const sport = SPORT_LABELS[lobby.sport];
       const when = formatDateTime(lobby.startAt);
       const bar = progressBar(lobby.filledCount, lobby.slotCount);
-      const urgent = urgentRole(lobby);
+      const needed = neededLine(lobby);
       const lines = [
         `${sport === "Волейбол" ? "🏐" : "⚽"} ${sport} • ${when}`,
         `📍 ${lobby.venue.name}`,
         `👥 Заполнено: ${lobby.filledCount} / ${lobby.slotCount}  [${bar}]`,
       ];
 
-      if (urgent && lobby.status !== "full") {
-        lines.push(`🔥 Срочно нужен: 1 ${urgent}`);
+      if (needed && lobby.status !== "full") {
+        lines.push(`🔥 ${needed}`);
       } else if (lobby.status === "full") {
         lines.push("✅ Состав собран");
       }

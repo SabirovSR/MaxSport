@@ -57,6 +57,20 @@ const state = {
       occupied(1, "Форвард", player("p-2", "Иван", "Форвард")),
     ],
   }),
+  started: makeLobby({
+    id: "lobby-started",
+    sport: "airsoft",
+    joinMode: "instant",
+    status: "started",
+    startAt: "2026-09-27T13:00:00.000Z",
+    organizer: me,
+    slots: [
+      occupied(0, "Снайпер", me),
+      free(1, "Пулемётчик"),
+      free(2, "Командир"),
+      free(3, "Штурмовик"),
+    ],
+  }),
   request: null,
   skills: [
     {
@@ -109,7 +123,7 @@ function json(res, status, body) {
 }
 
 function lobbyById(id) {
-  return [state.instant, state.approval, state.finished].find(
+  return [state.instant, state.approval, state.finished, state.started].find(
     (lobby) => lobby.id === id
   );
 }
@@ -158,7 +172,7 @@ const server = http.createServer((req, res) => {
   }
   if (path === "/api/lobbies" && method === "GET") {
     return json(res, 200, {
-      lobbies: [state.instant, state.approval, state.finished],
+      lobbies: [state.instant, state.approval, state.finished, state.started],
     });
   }
   if (path === "/api/me/lobbies") {
@@ -177,6 +191,13 @@ const server = http.createServer((req, res) => {
           mySlotId: state.finished.slots[0].id,
           myPresenceStatus: "on_site",
           karmaPending: true,
+        },
+        {
+          ...state.started,
+          myRole: "organizer",
+          mySlotId: state.started.slots[0].id,
+          myPresenceStatus: "on_site",
+          karmaPending: false,
         },
       ],
     });
@@ -258,6 +279,14 @@ const server = http.createServer((req, res) => {
             roleRequired: slot.roleRequired,
             status: "expected",
           })),
+      });
+    }
+    if (rest.endsWith("/role") && method === "PATCH") {
+      return readBody(req).then((body) => {
+        const slotId = rest.split("/")[2];
+        const slot = lobby.slots.find((item) => item.id === slotId);
+        if (slot) slot.roleRequired = body.role ?? null;
+        json(res, 200, { lobby });
       });
     }
     if (rest.endsWith("/book") && method === "POST") {

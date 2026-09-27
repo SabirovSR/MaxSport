@@ -10,6 +10,7 @@ import {
   type Venue,
 } from "../api";
 import { VenueMap, type MapPoint } from "../components/VenueMap";
+import { NeededPlayers } from "../components/NeededPlayers";
 import { SlotMatrix } from "../components/SlotMatrix";
 import { Sheet } from "../components/Sheet";
 import { LobbyStatusBadge } from "../components/LobbyStatusBadge";
@@ -23,7 +24,6 @@ import {
   formatMoney,
   formatStartAt,
   forgetSport,
-  pluralSlots,
   readMySports,
   rememberSport,
 } from "../lib/format";
@@ -39,7 +39,6 @@ function LobbyCard({
 }) {
   const free = lobby.slotCount - lobby.filledCount;
   const distance = formatDistance(lobby.distanceM);
-  const neededRole = lobby.slots.find((s) => !s.userId && s.roleRequired);
   const myLobby = mine && "karmaPending" in lobby ? lobby : null;
 
   return (
@@ -62,7 +61,11 @@ function LobbyCard({
           {lobby.filledCount}/{lobby.slotCount}
         </span>
       </div>
-      <LobbyStatusBadge status={lobby.status} />
+      <div
+        className={lobby.status === "started" ? "lobby-live-status" : undefined}
+      >
+        <LobbyStatusBadge status={lobby.status} />
+      </div>
       {myLobby?.karmaPending && <p className="hot-flag">Оцените игроков</p>}
 
       <SlotMatrix slots={lobby.slots} limit={12} />
@@ -70,10 +73,8 @@ function LobbyCard({
       <div className="card-foot">
         {free === 0 ? (
           <span>Состав собран</span>
-        ) : neededRole ? (
-          <span className="hot-flag">Нужен {neededRole.roleRequired}</span>
         ) : (
-          <span>Осталось {pluralSlots(free)}</span>
+          <NeededPlayers slots={lobby.slots} />
         )}
         <span className="muted">{LEVEL_LABELS[lobby.gameLevel]}</span>
         {lobby.rentTotal > 0 && (

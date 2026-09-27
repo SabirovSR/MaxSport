@@ -77,6 +77,12 @@ export interface LobbyService {
     slotId: string,
     userId: string
   ): Promise<LobbyWithDetails>;
+  changeSlotRole(
+    lobbyId: string,
+    slotId: string,
+    actorId: string,
+    role: string | null
+  ): Promise<LobbyWithDetails>;
   requestJoin(
     lobbyId: string,
     slotId: string,
@@ -383,7 +389,12 @@ export function createLobbyService(
           await client.query(
             `INSERT INTO slots (lobby_id, role_required, user_id, slot_index)
              VALUES ($1, $2, $3, $4)`,
-            [lobby.id, role, isOrganizerSlot ? input.organizerId : null, i]
+            [
+              lobby.id,
+              isOrganizerSlot ? null : role,
+              isOrganizerSlot ? input.organizerId : null,
+              i,
+            ]
           );
         }
 
@@ -672,6 +683,26 @@ export function createLobbyService(
         }
         return loadDetails(client, lobbyId);
       });
+    },
+
+    async changeSlotRole(lobbyId, slotId, actorId, role) {
+      const lobby = await loadDetails(pool, lobbyId);
+      if (!["open", "full", "gathering"].includes(lobby.status)) {
+        throw new ValidationError("Состав этого лобби уже нельзя менять");
+      }
+      const slot = lobby.slots.find((item) => item.id === slotId);
+      if (!slot) throw new NotFoundError("Слот");
+      if (slot.userId !== actorId && lobby.organizerId !== actorId) {
+        throw new ForbiddenError();
+      }
+      if (role != null && !ROLE_OPTIONS[lobby.sport].includes(role)) {
+        throw new ValidationError("Некорректное амплуа");
+      }
+      await pool.query(`UPDATE slots SET role_required = $1 WHERE id = $2`, [
+        role,
+        slotId,
+      ]);
+      return loadDetails(pool, lobbyId);
     },
 
     async requestJoin(lobbyId, slotId, userId) {
