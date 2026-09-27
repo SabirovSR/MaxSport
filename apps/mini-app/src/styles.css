@@ -464,23 +464,43 @@ body {
   margin: 0 auto var(--ms-space-4);
 }
 
+.confirm-sheet-title,
+.confirm-sheet-text {
+  text-align: center;
+}
+
 .confirm-sheet-text {
   margin: 0 0 var(--ms-space-5);
 }
 
 .confirm-sheet-actions {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: var(--ms-space-2);
+}
+
+.confirm-sheet-actions > * {
+  width: 100%;
 }
 
 .confirm-sheet-actions button,
 .confirm-sheet-actions button * {
+  width: 100%;
   min-height: 44px;
   height: auto;
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
+  text-align: center;
+  justify-content: center;
+}
+
+.confirm-sheet-actions.is-danger > :last-child,
+.confirm-sheet-actions.is-danger > :last-child button {
+  background: var(--ms-state-noshow);
+  border-color: var(--ms-state-noshow);
+  color: #fff;
 }
 
 .sticky-bar {
@@ -700,11 +720,36 @@ body {
 
 .roster-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--ms-space-3);
-  padding: var(--ms-space-3) 0;
+  padding: var(--ms-space-4) 0;
   border-bottom: 1px solid var(--ms-border-subtle);
+}
+
+.roster-item-head .muted {
+  margin-top: 2px;
+  padding-left: calc(30px + var(--ms-space-2));
+}
+
+.roster-status {
+  align-self: center;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 7.5rem;
+  padding: var(--ms-space-1) var(--ms-space-4);
+  border: 1px solid color-mix(in srgb, currentColor 38%, transparent);
+  border-radius: var(--ms-radius-pill);
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: var(--ms-text-caption);
+  font-weight: var(--ms-weight-semibold);
+}
+
+.roster-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ms-space-2);
 }
 
 .status-on_site {
@@ -969,7 +1014,7 @@ body {
 
 .request-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   flex-wrap: wrap;
   gap: var(--ms-space-2);
 }
@@ -980,13 +1025,18 @@ body {
 
 .toast-region {
   position: fixed;
-  z-index: calc(var(--ms-layer-sheet) + 10);
+  z-index: var(--ms-layer-toast);
   inset-inline: var(--ms-space-4);
   bottom: 4.5rem;
   display: grid;
   justify-items: center;
   gap: var(--ms-space-2);
   pointer-events: none;
+}
+
+body:has(.sheet) .toast-region {
+  top: var(--ms-space-4);
+  bottom: auto;
 }
 
 .toast {
@@ -1011,10 +1061,5 @@ body {
 @media (max-width: 390px) {
   .filter-selects {
     grid-template-columns: 1fr;
-  }
-
-  .roster-item {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }

@@ -6,6 +6,7 @@ interface ConfirmSheetProps {
   title: string;
   description: string;
   confirmLabel: string;
+  danger?: boolean;
   busy?: boolean;
   onConfirm: () => void;
   onClose: () => void;
@@ -16,6 +17,7 @@ export function ConfirmSheet({
   title,
   description,
   confirmLabel,
+  danger = false,
   busy = false,
   onConfirm,
   onClose,
@@ -26,9 +28,13 @@ export function ConfirmSheet({
 
   return (
     <Sheet open={open} onClose={close} label={title}>
-      <h2 className="section-title">{title}</h2>
+      <h2 className="section-title confirm-sheet-title">{title}</h2>
       <p className="muted confirm-sheet-text">{description}</p>
-      <div className="confirm-sheet-actions">
+      <div
+        className={
+          danger ? "confirm-sheet-actions is-danger" : "confirm-sheet-actions"
+        }
+      >
         <Button variant="secondary" disabled={busy} onClick={close}>
           Не сейчас
         </Button>

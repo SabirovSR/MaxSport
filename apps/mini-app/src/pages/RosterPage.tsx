@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
 import { useToast } from "../components/Toast";
 import { useMe } from "../lib/useMe";
 import { openMaxChat } from "../lib/maxContact";
+import { markableStatuses } from "../lib/presenceActions";
 
 const STATUS_LABELS: Record<string, string> = {
   expected: "Ожидается",
@@ -16,8 +17,6 @@ const STATUS_LABELS: Record<string, string> = {
   no_show: "Не пришёл",
   cancelled: "Отменил",
 };
-
-const MARKABLE = ["on_site", "on_the_way", "no_show"] as const;
 
 export function RosterPage() {
   const { id } = useParams<{ id: string }>();
@@ -118,14 +117,19 @@ export function RosterPage() {
     }
   }
 
-  function writeToPlayer(entry: RosterEntry) {
-    if (
-      !openMaxChat({
-        username: entry.username,
-        maxUserId: entry.maxUserId,
-      })
-    ) {
-      showToast("Не удалось открыть чат с игроком", "error");
+  async function writeToPlayer(entry: RosterEntry) {
+    if (openMaxChat({ username: entry.username })) return;
+    if (!id) return;
+    setBusy(true);
+    try {
+      await api.contactLobby(id, entry.userId);
+      showToast("Игроку отправлено сообщение в бот");
+    } catch (cause) {
+      const message =
+        cause instanceof Error ? cause.message : "Не удалось открыть чат";
+      showToast(message, "error");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -205,6 +209,7 @@ export function RosterPage() {
 
   const onSite = roster.filter((entry) => entry.status === "on_site").length;
   const lateCancels = roster.filter((entry) => entry.status === "cancelled");
+  const isOrganizer = lobby?.organizer.id === userId;
   const confirmation =
     pendingAction === "kick-player"
       ? {
@@ -212,6 +217,7 @@ export function RosterPage() {
           description:
             "Игрок потеряет место в составе, а слот снова станет свободным.",
           confirmLabel: "Удалить",
+          danger: true,
           onConfirm: removePlayer,
         }
       : pendingAction === "finish-lobby"
@@ -220,6 +226,7 @@ export function RosterPage() {
             description:
               "После завершения откроется голосование за карму. Вернуться к ростеру будет нельзя.",
             confirmLabel: "Завершить",
+            danger: true,
             onConfirm: finishGame,
           }
         : {
@@ -227,6 +234,7 @@ export function RosterPage() {
             description:
               "Лобби перейдёт в статус «Идёт игра». Проверьте явку перед началом.",
             confirmLabel: "Начинаем",
+            danger: false,
             onConfirm: startGame,
           };
 
@@ -248,7 +256,7 @@ export function RosterPage() {
           <h3 className="section-title">Заявки ({requests.length})</h3>
           {requests.map((request) => (
             <div key={request.id} className="roster-item">
-              <div>
+              <div className="roster-item-head">
                 <PlayerChip player={request.player} />
                 <div className="muted">
                   {request.roleRequired ?? "Любое амплуа"}
@@ -284,7 +292,7 @@ export function RosterPage() {
 
       {roster.map((entry) => (
         <div key={entry.slotId} className="roster-item">
-          <div>
+          <div className="roster-item-head">
             <PlayerChip
               player={{
                 id: entry.userId,
@@ -295,25 +303,26 @@ export function RosterPage() {
             />
             <div className="muted">{entry.roleRequired ?? "Любое амплуа"}</div>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div className={`status-${entry.status}`}>
-              {STATUS_LABELS[entry.status] ?? entry.status}
-            </div>
-            <div className="chips" style={{ marginTop: 4, marginBottom: 0 }}>
-              {MARKABLE.filter((status) => status !== entry.status).map(
-                (status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    className="chip"
-                    disabled={busy}
-                    onClick={() => mark(entry.slotId, status)}
-                  >
-                    {STATUS_LABELS[status]}
-                  </button>
-                )
-              )}
-            </div>
+          <div className={`roster-status status-${entry.status}`}>
+            {STATUS_LABELS[entry.status] ?? entry.status}
+          </div>
+          <div className="roster-item-actions">
+            {markableStatuses({
+              entryUserId: entry.userId,
+              actorUserId: userId,
+              isOrganizer: Boolean(isOrganizer),
+              current: entry.status,
+            }).map((status) => (
+              <button
+                key={status}
+                type="button"
+                className="chip"
+                disabled={busy}
+                onClick={() => mark(entry.slotId, status)}
+              >
+                {STATUS_LABELS[status]}
+              </button>
+            ))}
             {entry.userId !== userId && (
               <button
                 type="button"
@@ -378,6 +387,7 @@ export function RosterPage() {
         title={confirmation.title}
         description={confirmation.description}
         confirmLabel={confirmation.confirmLabel}
+        danger={confirmation.danger}
         busy={busy}
         onConfirm={confirmation.onConfirm}
         onClose={() => setPendingAction(null)}

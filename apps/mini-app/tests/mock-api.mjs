@@ -233,6 +233,9 @@ const server = http.createServer((req, res) => {
     if (rest === "/notify-players" && method === "POST") {
       return json(res, 200, { sent: 1 });
     }
+    if (rest === "/contact" && method === "POST") {
+      return json(res, 200, { ok: true });
+    }
     if (rest === "/karma/status") {
       return json(res, 200, {
         status: {

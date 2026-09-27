@@ -6,6 +6,13 @@ import {
   canRateLobby,
 } from "../src/lib/lobbyActions";
 import { formatSlots, parseCount, slotNoun, slotWord } from "../src/lib/format";
+import {
+  lobbyDeepLink,
+  lobbyShareText,
+  maxShareUrl,
+} from "../src/lib/lobbyShare";
+import { maxProfileUrl } from "../src/lib/maxContact";
+import { markableStatuses } from "../src/lib/presenceActions";
 import { sortLobbies } from "../src/lib/lobbySort";
 
 function lobby(
@@ -93,6 +100,73 @@ describe("slot declension", () => {
     expect(parseCount("08")).toBe(8);
     expect(parseCount("12")).toBe(12);
     expect(parseCount("")).toBe(0);
+  });
+});
+
+describe("lobby share links", () => {
+  it("builds a startapp deeplink and a :share url", () => {
+    const link = lobbyDeepLink("gov_max_sport_bot", "lobby-1");
+    expect(link).toBe(
+      "https://max.ru/gov_max_sport_bot?startapp=lobby_lobby-1"
+    );
+    const text = lobbyShareText({
+      sport: "Волейбол",
+      when: "ср, 19:00",
+      venue: "ФОК",
+      link,
+    });
+    expect(text).toContain(link);
+    expect(maxShareUrl(text)).toBe(
+      `https://max.ru/:share?text=${encodeURIComponent(text)}`
+    );
+  });
+});
+
+describe("max contact links", () => {
+  it("opens only a username profile, never /id", () => {
+    expect(maxProfileUrl({ username: "@coach" })).toBe("https://max.ru/coach");
+    expect(maxProfileUrl({ maxUserId: 42 })).toBeNull();
+    expect(maxProfileUrl({ username: "  ", maxUserId: 42 })).toBeNull();
+  });
+});
+
+describe("presence mark rights", () => {
+  it("lets a player edit only their own transit and on-site status", () => {
+    expect(
+      markableStatuses({
+        entryUserId: "me",
+        actorUserId: "me",
+        isOrganizer: false,
+        current: "expected",
+      })
+    ).toEqual(["on_the_way", "on_site"]);
+    expect(
+      markableStatuses({
+        entryUserId: "other",
+        actorUserId: "me",
+        isOrganizer: false,
+        current: "expected",
+      })
+    ).toEqual([]);
+  });
+
+  it("lets an organizer mark others only as arrived or no-show", () => {
+    expect(
+      markableStatuses({
+        entryUserId: "player",
+        actorUserId: "org",
+        isOrganizer: true,
+        current: "expected",
+      })
+    ).toEqual(["on_site", "no_show"]);
+    expect(
+      markableStatuses({
+        entryUserId: "org",
+        actorUserId: "org",
+        isOrganizer: true,
+        current: "expected",
+      })
+    ).toEqual(["on_the_way", "on_site"]);
   });
 });
 

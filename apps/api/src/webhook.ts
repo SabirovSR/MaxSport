@@ -7,6 +7,7 @@ import type { RealtimeHub } from "@maxsport/realtime";
 import type { LobbyWithDetails, Pool } from "@maxsport/shared";
 import { DomainError } from "@maxsport/shared";
 import type { KarmaService } from "@maxsport/karma";
+import type { NotificationScheduler } from "@maxsport/notifications";
 import { findUserByMaxId } from "./auth.js";
 
 interface WebhookDeps {
@@ -19,6 +20,7 @@ interface WebhookDeps {
   presence: PresenceService;
   karma: KarmaService;
   realtime: RealtimeHub;
+  notifications: NotificationScheduler;
   publicUrl: string;
 }
 
@@ -57,11 +59,22 @@ export function registerWebhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
         lobby.filledCount >= lobby.slotCount - 1;
 
       if (lobby.joinMode === "approval") {
-        await deps.lobbies.requestJoin(lobbyId, slotId, user.id);
+        const joinRequest = await deps.lobbies.requestJoin(
+          lobbyId,
+          slotId,
+          user.id
+        );
         await deps.realtime.publishLobbyUpdate(lobbyId, {
           type: "join_request",
           lobbyId,
         });
+        void deps.notifications
+          .notifyJoinRequest(lobbyId, {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            roleRequired: joinRequest.roleRequired,
+          })
+          .catch((error) => console.error(error));
         await ctx.reply("Заявка отправлена организатору");
         return;
       }

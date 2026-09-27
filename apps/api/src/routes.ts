@@ -213,6 +213,13 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
         type: "join_request",
         lobbyId: id,
       });
+      void deps.notifications
+        .notifyJoinRequest(id, {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          roleRequired: joinRequest.roleRequired,
+        })
+        .catch((error) => console.error(error));
       return reply.status(201).send({ request: joinRequest });
     } catch (error) {
       const mapped = handleError(error);
@@ -375,6 +382,19 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
       await deps.chatCard.syncCard(id);
       await deps.realtime.publishLobbyUpdate(id, lobby);
       return reply.send({ lobby });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.post("/api/lobbies/:id/contact", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id } = request.params as { id: string };
+      const body = request.body as { userId?: string } | undefined;
+      await deps.notifications.notifyContact(id, user.id, body?.userId);
+      return reply.send({ ok: true });
     } catch (error) {
       const mapped = handleError(error);
       return reply.status(mapped.statusCode).send(mapped.body);
