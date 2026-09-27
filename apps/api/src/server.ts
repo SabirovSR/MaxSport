@@ -155,6 +155,7 @@ async function main() {
     presence,
     karma,
     realtime,
+    notifications,
     publicUrl,
   });
 

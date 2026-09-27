@@ -5,15 +5,16 @@ export interface MaxContact {
 
 export function maxProfileUrl(contact: MaxContact): string | null {
   const username = contact.username?.replace(/^@/, "").trim();
-  if (username) return `https://max.ru/${encodeURIComponent(username)}`;
-  if (contact.maxUserId) return `https://max.ru/id${contact.maxUserId}`;
-  return null;
+  if (!username) return null;
+  return `https://max.ru/${encodeURIComponent(username)}`;
 }
 
 export function openMaxChat(contact: MaxContact): boolean {
   const url = maxProfileUrl(contact);
   if (!url) return false;
-  if (window.WebApp?.openLink) {
+  if (window.WebApp?.openMaxLink) {
+    window.WebApp.openMaxLink(url);
+  } else if (window.WebApp?.openLink) {
     window.WebApp.openLink(url);
   } else {
     window.open(url, "_blank", "noopener,noreferrer");

@@ -64,3 +64,27 @@ describe("notify lobby players", () => {
     ).rejects.toBeInstanceOf(ValidationError);
   });
 });
+
+describe("notify join request", () => {
+  it("sends the organizer a roster deep link", async () => {
+    const sendMessage = vi.fn(async () => ({ messageId: "m1" }));
+    const scheduler = createNotificationScheduler(
+      {
+        query: vi.fn(async () => ({ rows: [{ max_user_id: 77 }] })),
+      } as unknown as Pool,
+      { sendMessage } as unknown as MaxApiClient
+    );
+
+    await scheduler.notifyJoinRequest("lobby-1", {
+      firstName: "Иван",
+      lastName: null,
+      roleRequired: "Либеро",
+    });
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    const payload = sendMessage.mock.calls[0]![0];
+    expect(payload.userId).toBe(77);
+    expect(payload.text).toContain("Иван");
+    expect(payload.buttons?.[0]?.[0]?.url).toContain("startapp=roster_lobby-1");
+  });
+});

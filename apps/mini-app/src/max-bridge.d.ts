@@ -14,8 +14,14 @@ declare global {
           photo_url?: string;
         };
       };
-      shareMaxContent?: (params: { mid: string; chatType?: string }) => void;
+      shareMaxContent?: (params: {
+        mid?: string;
+        chatType?: string;
+        text?: string;
+        link?: string;
+      }) => void;
       openLink?: (url: string) => void;
+      openMaxLink?: (url: string) => void;
       ready?: () => void;
       close?: () => void;
       BackButton?: {

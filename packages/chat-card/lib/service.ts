@@ -1,5 +1,5 @@
 import type { LobbyWithDetails } from "@maxsport/shared";
-import { GAME_LEVEL_LABELS, SPORT_LABELS } from "@maxsport/shared";
+import { DomainError, GAME_LEVEL_LABELS, SPORT_LABELS } from "@maxsport/shared";
 import type { MaxApiClient, InlineButton } from "@maxsport/max-channel";
 import type { LobbyService } from "@maxsport/lobby";
 
@@ -109,11 +109,18 @@ export function createChatCardService(
     async publishToOrganizer(lobby, organizerMaxUserId) {
       const text = this.renderText(lobby);
       const buttons = this.renderButtons(lobby);
-      return maxApi.sendMessage({
-        userId: organizerMaxUserId,
-        text,
-        buttons,
-      });
+      try {
+        return await maxApi.sendMessage({
+          userId: organizerMaxUserId,
+          text,
+          buttons,
+        });
+      } catch {
+        throw new DomainError(
+          "Бот не смог отправить карточку. Напишите ему в личку и повторите",
+          "MAX_UPSTREAM"
+        );
+      }
     },
 
     async syncCard(lobbyId) {

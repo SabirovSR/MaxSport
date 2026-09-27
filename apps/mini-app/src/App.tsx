@@ -28,7 +28,11 @@ export function App() {
 
   useEffect(() => {
     const start = getStartParam();
-    if (start?.startsWith("lobby_")) {
+    if (start?.startsWith("roster_")) {
+      navigate(`/lobby/${start.slice("roster_".length)}/roster`, {
+        replace: true,
+      });
+    } else if (start?.startsWith("lobby_")) {
       navigate(`/lobby/${start.slice("lobby_".length)}`, { replace: true });
     }
   }, [navigate]);
@@ -38,32 +42,32 @@ export function App() {
       <div className="app-shell">
         <div className="page">
           <header className="header">
-          <Link to="/" className="logo">
-            <Mark size={26} />
-            MAX <span>Sport</span>
-          </Link>
-          <Link
-            to="/passport"
-            className="avatar-ring"
-            aria-label="Игровой паспорт"
-            style={{
-              background: `conic-gradient(var(--ms-accent) ${reliability * 3.6}deg, var(--ms-border-subtle) 0)`,
-            }}
-          >
-            {photoUrl ? (
-              <img
-                className="avatar"
-                src={photoUrl}
-                alt=""
-                width={32}
-                height={32}
-              />
-            ) : (
-              <span className="avatar">
-                {me ? initialsOf(me.user.firstName, me.user.lastName) : ""}
-              </span>
-            )}
-          </Link>
+            <Link to="/" className="logo">
+              <Mark size={26} />
+              MAX <span>Sport</span>
+            </Link>
+            <Link
+              to="/passport"
+              className="avatar-ring"
+              aria-label="Игровой паспорт"
+              style={{
+                background: `conic-gradient(var(--ms-accent) ${reliability * 3.6}deg, var(--ms-border-subtle) 0)`,
+              }}
+            >
+              {photoUrl ? (
+                <img
+                  className="avatar"
+                  src={photoUrl}
+                  alt=""
+                  width={32}
+                  height={32}
+                />
+              ) : (
+                <span className="avatar">
+                  {me ? initialsOf(me.user.firstName, me.user.lastName) : ""}
+                </span>
+              )}
+            </Link>
           </header>
 
           <Routes>

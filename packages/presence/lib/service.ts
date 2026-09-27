@@ -32,7 +32,7 @@ export interface PresenceService {
   ): Promise<void>;
   manualMark(
     slotId: string,
-    organizerId: string,
+    actorId: string,
     status: PresenceStatus
   ): Promise<void>;
   markNoShows(lobbyId: string): Promise<number>;
@@ -129,21 +129,32 @@ export function createPresenceService(pool: Pool): PresenceService {
       await this.confirmOnSite(slotId, userId);
     },
 
-    async manualMark(slotId, organizerId, status) {
+    async manualMark(slotId, actorId, status) {
       const lobbyCheck = await pool.query(
-        `SELECT l.organizer_id FROM lobbies l
+        `SELECT l.organizer_id, s.user_id
+         FROM lobbies l
          JOIN slots s ON s.lobby_id = l.id
          WHERE s.id = $1`,
         [slotId]
       );
       if (!lobbyCheck.rows[0]) throw new NotFoundError("Слот");
-      if (lobbyCheck.rows[0].organizer_id !== organizerId) {
-        throw new ForbiddenError();
+      const organizerId = lobbyCheck.rows[0].organizer_id as string;
+      const occupantId = lobbyCheck.rows[0].user_id as string | null;
+      if (!occupantId) throw new NotFoundError("Явка");
+
+      const isSelf = occupantId === actorId;
+      const isOrganizer = organizerId === actorId;
+      const allowed = isSelf
+        ? status === "on_the_way" || status === "on_site"
+        : isOrganizer && (status === "on_site" || status === "no_show");
+      if (!allowed) {
+        throw new ForbiddenError("Этот статус явки вам недоступен");
       }
+
       await pool.query(
         `UPDATE presence_records SET status = $1, updated_at = NOW()
-         WHERE slot_id = $2`,
-        [status, slotId]
+         WHERE slot_id = $2 AND user_id = $3`,
+        [status, slotId, occupantId]
       );
     },
 

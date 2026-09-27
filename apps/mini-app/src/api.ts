@@ -439,6 +439,12 @@ export const api = {
       }
     );
   },
+  contactLobby(lobbyId: string, userId?: string) {
+    return apiFetch<{ ok: boolean }>(`/api/lobbies/${lobbyId}/contact`, {
+      method: "POST",
+      body: JSON.stringify(userId ? { userId } : {}),
+    });
+  },
   submitKarma(body: {
     targetId: string;
     lobbyId: string;

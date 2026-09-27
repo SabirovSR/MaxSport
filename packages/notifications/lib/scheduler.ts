@@ -12,6 +12,19 @@ export interface NotificationScheduler {
   scheduleLobbyJobs(lobbyId: string, startAt: Date): Promise<void>;
   rescheduleLobbyJobs(lobbyId: string, startAt: Date): Promise<void>;
   notifyLobbyPlayers(lobbyId: string, organizerId: string): Promise<number>;
+  notifyJoinRequest(
+    lobbyId: string,
+    applicant: {
+      firstName: string;
+      lastName: string | null;
+      roleRequired: string | null;
+    }
+  ): Promise<void>;
+  notifyContact(
+    lobbyId: string,
+    fromUserId: string,
+    toUserId?: string
+  ): Promise<void>;
 }
 
 const JOB_OFFSETS: Record<
@@ -267,6 +280,100 @@ export function createNotificationScheduler(
         throw new ValidationError("Пока некому написать: в составе только вы");
       }
       return sent;
+    },
+    async notifyJoinRequest(lobbyId, applicant) {
+      const result = await pool.query(
+        `SELECT u.max_user_id
+         FROM lobbies l
+         JOIN users u ON u.id = l.organizer_id
+         WHERE l.id = $1`,
+        [lobbyId]
+      );
+      const maxUserId = Number(result.rows[0]?.max_user_id);
+      if (!maxUserId) return;
+      const name = [applicant.firstName, applicant.lastName]
+        .filter(Boolean)
+        .join(" ");
+      const role = applicant.roleRequired ? ` (${applicant.roleRequired})` : "";
+      const botUsername = process.env.BOT_USERNAME ?? "gov_max_sport_bot";
+      await maxApi.sendMessage({
+        userId: maxUserId,
+        text: `Заявка в лобби: ${name}${role} хочет присоединиться. Откройте ростер, чтобы принять или отклонить.`,
+        buttons: [
+          [
+            {
+              type: "open_app",
+              text: "Открыть ростер",
+              url: `https://max.ru/${botUsername}?startapp=roster_${lobbyId}`,
+            },
+          ],
+        ],
+      });
+    },
+    async notifyContact(lobbyId, fromUserId, toUserId) {
+      const lobby = await pool.query(
+        `SELECT organizer_id FROM lobbies WHERE id = $1`,
+        [lobbyId]
+      );
+      if (!lobby.rows[0]) throw new ValidationError("Лобби не найдено");
+      const organizerId = lobby.rows[0].organizer_id as string;
+      const targetId = toUserId ?? organizerId;
+      if (fromUserId === targetId) {
+        throw new ValidationError("Нельзя написать себе");
+      }
+
+      const fromIsOrganizer = fromUserId === organizerId;
+      const toIsOrganizer = targetId === organizerId;
+      if (!fromIsOrganizer && !toIsOrganizer) {
+        throw new ForbiddenError();
+      }
+
+      if (toIsOrganizer) {
+        const allowed = await pool.query(
+          `SELECT 1 FROM slots WHERE lobby_id = $1 AND user_id = $2
+           UNION
+           SELECT 1 FROM slot_join_requests
+           WHERE lobby_id = $1 AND user_id = $2 AND status = 'pending'`,
+          [lobbyId, fromUserId]
+        );
+        if (!allowed.rows[0]) throw new ForbiddenError();
+      } else {
+        const occupant = await pool.query(
+          `SELECT 1 FROM slots WHERE lobby_id = $1 AND user_id = $2`,
+          [lobbyId, targetId]
+        );
+        if (!occupant.rows[0]) throw new ForbiddenError();
+      }
+
+      const [from, to] = await Promise.all([
+        pool.query(`SELECT first_name, last_name FROM users WHERE id = $1`, [
+          fromUserId,
+        ]),
+        pool.query(`SELECT max_user_id FROM users WHERE id = $1`, [targetId]),
+      ]);
+      const maxUserId = Number(to.rows[0]?.max_user_id);
+      if (!maxUserId) {
+        throw new ValidationError(
+          "Нет аккаунта MAX, чтобы доставить сообщение"
+        );
+      }
+      const name = [from.rows[0]?.first_name, from.rows[0]?.last_name]
+        .filter(Boolean)
+        .join(" ");
+      const botUsername = process.env.BOT_USERNAME ?? "gov_max_sport_bot";
+      await maxApi.sendMessage({
+        userId: maxUserId,
+        text: `${name || "Игрок"} хочет написать вам в MAX Sport. Откройте лобби.`,
+        buttons: [
+          [
+            {
+              type: "open_app",
+              text: "Открыть лобби",
+              url: `https://max.ru/${botUsername}?startapp=lobby_${lobbyId}`,
+            },
+          ],
+        ],
+      });
     },
   };
 }

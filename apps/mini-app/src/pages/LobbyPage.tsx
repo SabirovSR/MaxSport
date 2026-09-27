@@ -23,6 +23,11 @@ import {
   pluralSlots,
 } from "../lib/format";
 import { canEditLobby, canJoinLobby, canRateLobby } from "../lib/lobbyActions";
+import {
+  lobbyDeepLink,
+  lobbyShareText,
+  openLobbyShare,
+} from "../lib/lobbyShare";
 import { openMaxChat } from "../lib/maxContact";
 
 const HOLD_LABELS: Record<string, string> = {
@@ -185,25 +190,59 @@ export function LobbyPage() {
     }
   }
 
+  async function writeToOrganizer() {
+    if (!id || !lobby) return;
+    if (
+      openMaxChat({
+        username: lobby.organizer.username,
+      })
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.contactLobby(id);
+      showToast("Организатору отправлено сообщение в бот");
+    } catch (cause) {
+      const message =
+        cause instanceof Error
+          ? cause.message
+          : "Не удалось написать организатору";
+      showToast(message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function share() {
-    if (!id) return;
+    if (!id || !lobby) return;
     setBusy(true);
     setError(null);
     try {
       let mid = messageId;
-      if (!mid) {
-        const result = await api.publishCard(id);
-        mid = result.messageId;
-        setMessageId(mid);
+      if (!mid && lobby.organizer.id === userId) {
+        try {
+          const result = await api.publishCard(id);
+          mid = result.messageId;
+          setMessageId(mid);
+        } catch {
+          mid = null;
+        }
       }
-      if (window.WebApp?.shareMaxContent && mid) {
-        window.WebApp.shareMaxContent({ mid });
-        showToast("Карточка готова к отправке");
-      } else {
-        const message = "Поделиться карточкой чата можно только внутри MAX";
-        setError(message);
-        showToast(message, "error");
-      }
+      const { botUsername } = await api.getConfig();
+      const link = lobbyDeepLink(botUsername, id);
+      const text = lobbyShareText({
+        sport: SPORT_LABELS[lobby.sport] ?? lobby.sport,
+        when: formatStartAt(lobby.startAt),
+        venue: lobby.venue.name,
+        link,
+      });
+      const mode = await openLobbyShare({ mid, text, link });
+      showToast(
+        mode === "clipboard"
+          ? "Ссылка скопирована"
+          : "Выберите чат, чтобы отправить игру"
+      );
     } catch (cause) {
       const message =
         cause instanceof Error ? cause.message : "Не удалось поделиться";
@@ -290,6 +329,7 @@ export function LobbyPage() {
           description:
             "Слот снова станет свободным. При поздней отмене залог может быть удержан.",
           confirmLabel: "Покинуть",
+          danger: true,
           onConfirm: releaseMySlot,
         }
       : {
@@ -297,6 +337,7 @@ export function LobbyPage() {
           description:
             "Лобби будет закрыто для всех игроков. Это действие нельзя отменить.",
           confirmLabel: "Отменить лобби",
+          danger: true,
           onConfirm: cancelLobby,
         };
 
@@ -495,15 +536,9 @@ export function LobbyPage() {
           lobby.status !== "finished" && (
             <Button
               variant="secondary"
+              loading={busy}
               onClick={() => {
-                if (
-                  !openMaxChat({
-                    username: lobby.organizer.username,
-                    maxUserId: lobby.organizer.maxUserId,
-                  })
-                ) {
-                  showToast("Не удалось открыть чат с организатором", "error");
-                }
+                void writeToOrganizer();
               }}
             >
               Написать
@@ -567,6 +602,7 @@ export function LobbyPage() {
         title={confirmation.title}
         description={confirmation.description}
         confirmLabel={confirmation.confirmLabel}
+        danger={confirmation.danger}
         busy={busy}
         onConfirm={confirmation.onConfirm}
         onClose={() => setPendingAction(null)}
