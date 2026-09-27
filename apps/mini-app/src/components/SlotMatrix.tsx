@@ -1,11 +1,6 @@
 import type { Lobby } from "../api";
 import { initialsOf } from "../lib/format";
 
-/**
- * Reads the composition at a glance: filled slots are solid, slots that still
- * need a specific Амплуа are outlined, so a missing связующий is visible
- * before the card is even tapped.
- */
 export function SlotMatrix({
   slots,
   compact = false,

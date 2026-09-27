@@ -15,6 +15,7 @@ import type {
 export interface PassportView {
   user: User;
   badges: Badge[];
+  kudos: Array<{ tag: string; votes: number }>;
   attendancePct: number;
   sportSkills: SportSkill[];
 }
@@ -82,7 +83,7 @@ export function createKarmaService(pool: Pool): KarmaService {
       );
       if (lobby.rows[0]?.status !== "finished") {
         throw new ValidationError(
-          "Оценивать Игроков можно после завершения игры"
+          "Оценивать игроков можно после завершения игры"
         );
       }
       const voter = await pool.query(
@@ -90,7 +91,7 @@ export function createKarmaService(pool: Pool): KarmaService {
         [input.lobbyId, input.voterId]
       );
       if (!voter.rows[0]) {
-        throw new ValidationError("Голосовать могут только участники Лобби");
+        throw new ValidationError("Голосовать могут только участники лобби");
       }
       const target = await pool.query(
         `SELECT 1 FROM presence_records WHERE lobby_id = $1 AND user_id = $2`,
@@ -143,6 +144,14 @@ export function createKarmaService(pool: Pool): KarmaService {
          WHERE ub.user_id = $1`,
         [userId]
       );
+      const kudosResult = await pool.query(
+        `SELECT tag, COUNT(*)::int AS votes
+         FROM karma_votes
+         WHERE target_id = $1 AND tag IS NOT NULL AND btrim(tag) <> ''
+         GROUP BY tag
+         ORDER BY votes DESC, tag`,
+        [userId]
+      );
 
       const presenceStats = await pool.query(
         `SELECT
@@ -170,6 +179,10 @@ export function createKarmaService(pool: Pool): KarmaService {
           code: row.code as string,
           title: row.title as string,
           description: row.description as string,
+        })),
+        kudos: kudosResult.rows.map((row) => ({
+          tag: row.tag as string,
+          votes: Number(row.votes),
         })),
         attendancePct,
         sportSkills: skillsResult.rows.map(mapSkill),

@@ -3,8 +3,7 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// Brand art is served from stable root URLs rather than hashed bundle paths,
-// because og:image has to be an absolute URL a social scraper can resolve.
+// og:image — стабильный url, не хеш бандла
 const brandAssets = fileURLToPath(
   new URL("../../packages/brand/assets", import.meta.url)
 );

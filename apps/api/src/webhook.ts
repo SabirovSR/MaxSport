@@ -84,7 +84,7 @@ export function registerWebhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
 
   deps.bot.registerCommand("start", async (ctx) => {
     await ctx.reply(
-      "MAX Sport — собери состав и не сорви игру!\nОткрой Mini App или жми «Занять слот» в карточке Лобби."
+      "MAX Sport — собери состав и не сорви игру!\nОткрой Mini App или жми «Занять слот» в карточке лобби."
     );
   });
 
@@ -115,7 +115,6 @@ export function registerWebhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
       return;
     }
 
-    // BUG-011: When multiple free roles exist, ask user to choose.
     const freeRoles = new Set(
       freeSlots.map((slot) => slot.roleRequired ?? "Любое амплуа")
     );

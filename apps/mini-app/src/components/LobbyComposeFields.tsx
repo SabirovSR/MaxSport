@@ -1,5 +1,5 @@
 import { LEVEL_LABELS, ROLE_OPTIONS } from "../api";
-import { formatMoney, formatSlots, slotNoun } from "../lib/format";
+import { formatMoney, formatSlots, parseCount, slotNoun } from "../lib/format";
 
 export interface LobbyComposeValues {
   gameLevel: string;
@@ -57,17 +57,18 @@ export function LobbyComposeFields({
         <label htmlFor={`${idPrefix}-slots`}>Сколько слотов</label>
         <input
           id={`${idPrefix}-slots`}
-          type="number"
-          min={2}
-          max={24}
-          value={values.slotCount}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          value={values.slotCount > 0 ? String(values.slotCount) : ""}
           onChange={(event) =>
-            onChange({ slotCount: Number(event.target.value) })
+            onChange({ slotCount: parseCount(event.target.value) })
           }
         />
         {values.slotCount < 2 && (
           <p className="form-error">
-            Минимум {formatSlots(2, "nominative")} в Лобби.
+            Минимум {formatSlots(2, "nominative")} в лобби.
           </p>
         )}
       </div>
@@ -94,7 +95,7 @@ export function LobbyComposeFields({
       </div>
 
       <div className="form-group">
-        <label htmlFor={`${idPrefix}-join-mode`}>Как Игроки вступают</label>
+        <label htmlFor={`${idPrefix}-join-mode`}>Как игроки вступают</label>
         <select
           id={`${idPrefix}-join-mode`}
           value={values.joinMode}
@@ -108,26 +109,27 @@ export function LobbyComposeFields({
           <option value="instant">Сразу занимают слот</option>
         </select>
         <p className="form-hint">
-          В режиме заявок вы подтверждаете каждого Игрока в Ростере.
+          В режиме заявок вы подтверждаете каждого игрока в ростере.
         </p>
       </div>
 
       <div className="form-group">
-        <label htmlFor={`${idPrefix}-rent`}>Аренда Площадки, ₽</label>
+        <label htmlFor={`${idPrefix}-rent`}>Аренда площадки, ₽</label>
         <input
           id={`${idPrefix}-rent`}
-          type="number"
-          min={0}
-          step={100}
-          value={values.rentTotal}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          value={values.rentTotal > 0 ? String(values.rentTotal) : ""}
           onChange={(event) =>
-            onChange({ rentTotal: Number(event.target.value) })
+            onChange({ rentTotal: parseCount(event.target.value) })
           }
         />
         <p className="form-hint">
           {values.rentTotal > 0
             ? `Сплит: ${formatMoney(split)} с человека при ${formatSlots(values.slotCount, "prepositional")}.`
-            : "Бесплатное Лобби, Залог недоступен."}
+            : "Бесплатное лобби, залог недоступен."}
         </p>
       </div>
 

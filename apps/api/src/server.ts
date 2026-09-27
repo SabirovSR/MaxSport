@@ -7,10 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createPool } from "@maxsport/shared";
 import { createVenueRepository } from "@maxsport/venue";
 import { createLobbyService } from "@maxsport/lobby";
-import {
-  createMaxApiClient,
-  createMaxBotAdapter,
-} from "@maxsport/max-channel";
+import { createMaxApiClient, createMaxBotAdapter } from "@maxsport/max-channel";
 import { createChatCardService } from "@maxsport/chat-card";
 import { createPresenceService } from "@maxsport/presence";
 import { createPaymentService } from "@maxsport/payment";
@@ -69,7 +66,7 @@ async function main() {
     staticKey: process.env.YANDEX_STATIC_API_KEY ?? "",
   });
 
-  // BUG-003: Mask initData in logged URLs to prevent auth token leakage.
+  // не светить initdata в логах
   const app = Fastify({
     logger: {
       level: "info",
@@ -85,15 +82,9 @@ async function main() {
     },
   });
   await app.register(cors, {
-    origin: [
-      publicOrigin,
-      "http://localhost:5173",
-      "http://localhost:3000",
-    ],
+    origin: [publicOrigin, "http://localhost:5173", "http://localhost:3000"],
   });
 
-  // The Mini App registration owns reply.sendFile, which the SPA fallback at
-  // the bottom of this file depends on.
   const miniAppRoot = join(__dirname, "../../mini-app/dist");
   await app.register(fastifyStatic, {
     root: miniAppRoot,
@@ -109,16 +100,11 @@ async function main() {
 
   app.get("/healthz", async () => ({ ok: true, service: "maxsport-api" }));
 
-  // The landing is a static build with no access to server env, so its primary
-  // call to action points here instead of embedding the bot username. Keeps
-  // the deep link correct without a Docker build argument.
   app.get("/open", async (_request, reply) =>
     reply.redirect(`https://max.ru/${botUsername}`, 302)
   );
 
-  // wildcard:false makes @fastify/static enumerate the build at boot and
-  // register one route per file, plus "/" for index.html. A catch-all at this
-  // prefix would otherwise shadow /api, /app, /webhook and /healthz.
+  // без wildcard, иначе перекроются /api и /webhook
   const landingRoot = join(__dirname, "../../landing/dist");
   if (existsSync(join(landingRoot, "index.html"))) {
     await app.register(fastifyStatic, {
@@ -196,7 +182,6 @@ async function main() {
     }
   }
 
-  // BUG-001: Graceful shutdown — close all resources on SIGTERM/SIGINT.
   let shuttingDown = false;
   async function shutdown(signal: string) {
     if (shuttingDown) return;

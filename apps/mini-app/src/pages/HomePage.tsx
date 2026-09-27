@@ -146,8 +146,6 @@ export function HomePage() {
     if (me) setMySports(me.sportSkills.map((skill) => skill.sport));
   }, [me?.sportSkills]);
 
-  // "Рядом" needs a position, so asking for one is folded into the toggle
-  // rather than prompting on first open.
   const toggleNearby = async () => {
     if (nearbyOnly) {
       setNearbyOnly(false);
@@ -386,17 +384,17 @@ export function HomePage() {
           zoom={position ? 13 : 11}
           height={360}
           onSelect={setSelectedVenue}
-          emptyHint="Открытых Лобби на карте пока нет."
+          emptyHint="Открытых лобби на карте пока нет."
         />
       )}
 
       {!error && !loading && view === "feed" && visible.length === 0 && (
         <EmptyState
-          title={scope === "mine" ? "У вас пока нет игр" : "Открытых Лобби нет"}
+          title={scope === "mine" ? "У вас пока нет игр" : "Открытых лобби нет"}
         >
           <p>
             {scope === "mine"
-              ? "Запишитесь в состав или создайте своё Лобби."
+              ? "Запишитесь в состав или создайте своё лобби."
               : "Ослабьте фильтры или соберите игру сами."}
           </p>
           <Link to="/create">

@@ -232,4 +232,41 @@ describe("join requests", () => {
       })
     ).rejects.toBeInstanceOf(ValidationError);
   });
+
+  it("rejects a duplicate active event at the same venue and time", async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "ROLLBACK") return { rows: [] };
+      if (sql.includes("SELECT id FROM lobbies") && sql.includes("venue_id")) {
+        return { rows: [{ id: "other-lobby" }] };
+      }
+      throw new Error(`Unexpected query: ${sql}`);
+    });
+    const client = { query, release: vi.fn() };
+    const service = createLobbyService(
+      { connect: vi.fn(async () => client) } as unknown as Pool,
+      {
+        findById: vi.fn(async () => ({
+          id: "venue-1",
+          name: "Зал",
+          address: "Москва",
+          lat: 55.75,
+          lng: 37.61,
+          venueChatId: null,
+          createdBy: "organizer-1",
+        })),
+      } as unknown as VenueRepository
+    );
+
+    await expect(
+      service.create({
+        sport: "volleyball",
+        gameLevel: "amateur",
+        startAt: new Date("2026-10-01T18:00:00.000Z"),
+        venueId: "venue-1",
+        organizerId: "organizer-1",
+        rentTotal: 0,
+        slotCount: 2,
+      })
+    ).rejects.toThrow("уже есть");
+  });
 });

@@ -1,15 +1,3 @@
-/*
- * Tailwind v4 theme bridge. Import after `tokens.css` so the referenced
- * custom properties are already defined:
- *
- *   @import "tailwindcss";
- *   @import "@maxsport/brand/tokens.css";
- *   @import "@maxsport/brand/tailwind.css";
- *
- * Only the tokens a utility class should reach are mapped here. Everything
- * else stays available as a plain var() from tokens.css.
- */
-
 @theme {
   --color-ink-950: var(--ms-ink-950);
   --color-ink-900: var(--ms-ink-900);

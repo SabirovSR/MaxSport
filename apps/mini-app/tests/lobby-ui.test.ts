@@ -5,7 +5,7 @@ import {
   canJoinLobby,
   canRateLobby,
 } from "../src/lib/lobbyActions";
-import { formatSlots, slotNoun, slotWord } from "../src/lib/format";
+import { formatSlots, parseCount, slotNoun, slotWord } from "../src/lib/format";
 import { sortLobbies } from "../src/lib/lobbySort";
 
 function lobby(
@@ -86,6 +86,13 @@ describe("slot declension", () => {
     expect(slotWord(1, "accusative")).toBe("слот");
     expect(slotNoun(true)).toBe("слоты");
     expect(slotNoun(true, "instrumental")).toBe("слотами");
+  });
+
+  it("strips leading zeros from count fields", () => {
+    expect(parseCount("002")).toBe(2);
+    expect(parseCount("08")).toBe(8);
+    expect(parseCount("12")).toBe(12);
+    expect(parseCount("")).toBe(0);
   });
 });
 

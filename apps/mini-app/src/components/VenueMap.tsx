@@ -19,7 +19,6 @@ interface VenueMapProps {
   zoom?: number;
   height?: number;
   onSelect?: (id: string) => void;
-  /** Enables a single draggable pin, used by the Lobby constructor. */
   draggablePoint?: { lat: number; lng: number };
   onDragEnd?: (position: { lat: number; lng: number }) => void;
   emptyHint?: string;
@@ -62,7 +61,8 @@ function LoadedVenueMap({
   const anchor =
     center ??
     (points[0] ? { lat: points[0].lat, lng: points[0].lng } : undefined) ??
-    (draggablePoint ?? MOSCOW);
+    draggablePoint ??
+    MOSCOW;
   const location = useDefault({
     center: [anchor.lng, anchor.lat] as [number, number],
     zoom,
@@ -150,9 +150,7 @@ export function VenueMap({
               : "Карта не загрузилась."}
           </p>
           {points.length > 0 && (
-            <p className="map-state-hint">
-              Площадки доступны списком ниже.
-            </p>
+            <p className="map-state-hint">Площадки доступны списком ниже.</p>
           )}
         </div>
       </MapFrame>

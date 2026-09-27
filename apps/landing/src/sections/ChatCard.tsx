@@ -28,11 +28,6 @@ function Row({
   );
 }
 
-/**
- * A working miniature of the bot message, not a picture of one. Taking the
- * slot here runs the same state change the real Карточка чата performs for
- * everyone in the group chat, which is the point the section is making.
- */
 export function ChatCard() {
   const [taken, setTaken] = useState(false);
   const reduce = useReducedMotion();
@@ -102,7 +97,10 @@ export function ChatCard() {
                     key={index}
                     initial={false}
                     animate={{
-                      scale: isFilled && taken && index === TOTAL_SLOTS - 1 ? [1, 1.12, 1] : 1,
+                      scale:
+                        isFilled && taken && index === TOTAL_SLOTS - 1
+                          ? [1, 1.12, 1]
+                          : 1,
                     }}
                     transition={
                       reduce

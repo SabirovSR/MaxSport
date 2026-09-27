@@ -5,12 +5,6 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import "./styles.css";
 
-/**
- * Platform and colour scheme come from the MAX client rather than being
- * hardcoded, so Android users stop getting iOS styling and a light-themed
- * client stops getting a dark app. The brand tokens carry a light set for
- * exactly this case.
- */
 function resolvePlatform(): "ios" | "android" {
   const fromBridge = window.WebApp?.platform;
   if (fromBridge === "ios" || fromBridge === "android") return fromBridge;

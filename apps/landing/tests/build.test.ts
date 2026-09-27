@@ -2,14 +2,13 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const dist = new URL("../dist/", import.meta.url).pathname.replace(/^\/(\w:)/, "$1");
+const dist = new URL("../dist/", import.meta.url).pathname.replace(
+  /^\/(\w:)/,
+  "$1"
+);
 const indexPath = join(dist, "index.html");
 const built = existsSync(indexPath);
 
-/**
- * `npm run check` builds before it tests, so these assertions run against real
- * output. Standalone `npm test` skips rather than failing on a missing build.
- */
 describe.skipIf(!built)("landing build output", () => {
   const html = built ? readFileSync(indexPath, "utf8") : "";
 
@@ -48,8 +47,7 @@ describe.skipIf(!built)("landing build output", () => {
   it("resolves brand tokens instead of emitting bare custom property names", () => {
     const css = bundledText();
     expect(css).toMatch(/--ms-lime-500:\s*#c8f54a/i);
-    // A Tailwind v4 arbitrary value written with the v3 bracket syntax emits
-    // the property name without var(), which silently does nothing.
+    // без var() класс tailwind ничего не делает
     expect(css).not.toMatch(/transition-duration:\s*--ms-/);
   });
 });

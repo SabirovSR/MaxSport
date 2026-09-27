@@ -112,4 +112,42 @@ describe("Karma state", () => {
       votedTargetIds: ["user-2"],
     });
   });
+
+  it("shows tags from other players on the passport", async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes("SELECT * FROM users")) {
+        return {
+          rows: [
+            {
+              id: "user-1",
+              max_user_id: 1,
+              first_name: "Арсен",
+              last_name: null,
+              username: null,
+              photo_url: null,
+              game_level: "amateur",
+              reliability_pct: 90,
+              games_played: 3,
+              created_at: "2026-09-20T12:00:00.000Z",
+            },
+          ],
+        };
+      }
+      if (sql.includes("user_badges")) return { rows: [] };
+      if (sql.includes("FROM karma_votes")) {
+        return { rows: [{ tag: "крутой пас", votes: 2 }] };
+      }
+      if (sql.includes("FROM presence_records")) {
+        return { rows: [{ on_site: 1, total: 1 }] };
+      }
+      if (sql.includes("user_sport_skills")) return { rows: [] };
+      throw new Error(`Unexpected query: ${sql}`);
+    });
+    const service = createKarmaService({ query } as unknown as Pool);
+
+    await expect(service.getPassport("user-1")).resolves.toMatchObject({
+      kudos: [{ tag: "крутой пас", votes: 2 }],
+      badges: [],
+    });
+  });
 });

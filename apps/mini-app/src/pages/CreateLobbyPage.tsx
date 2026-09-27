@@ -70,8 +70,7 @@ export function CreateLobbyPage() {
     setBusy(true);
     setError(null);
     try {
-      // A saved Площадка is reused by coordinates so repeat games at the same
-      // hall do not pile up duplicate rows.
+      // площадку с теми же координатами не плодить
       const existing = saved.find(
         (item) =>
           Math.abs(item.lat - venue.lat) < 0.0002 &&
@@ -97,8 +96,7 @@ export function CreateLobbyPage() {
         depositEnabled: rentTotal > 0 && depositEnabled,
         joinMode,
         startAt: new Date(startAt).toISOString(),
-        // Required Амплуа occupy the last slots, leaving the opening ones free
-        // for anyone.
+        // нужные амплуа в конце, первые слоты свободные
         roleSlots: roles.map((role, offset) => ({
           index: slotCount - 1 - offset,
           role,
@@ -109,7 +107,7 @@ export function CreateLobbyPage() {
       navigate(`/lobby/${lobby.id}`);
     } catch (cause) {
       const message =
-        cause instanceof Error ? cause.message : "Не удалось создать Лобби";
+        cause instanceof Error ? cause.message : "Не удалось создать лобби";
       setError(message);
       showToast(message, "error");
     } finally {

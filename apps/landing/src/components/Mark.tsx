@@ -1,4 +1,3 @@
-/** Court frame with one filled slot. Geometry mirrors packages/brand/assets/mark.svg. */
 export function Mark({ size = 32 }: { size?: number }) {
   return (
     <svg
@@ -45,8 +44,7 @@ export function Wordmark({ size = 32 }: { size?: number }) {
     <span className="flex items-center gap-2.5">
       <Mark size={size} />
       <span className="text-[1.0625rem] font-semibold tracking-tight">
-        MAX{" "}
-        <span className="border-b-2 border-accent pb-px">Sport</span>
+        MAX <span className="border-b-2 border-accent pb-px">Sport</span>
       </span>
     </span>
   );

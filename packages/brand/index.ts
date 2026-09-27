@@ -1,14 +1,3 @@
-/**
- * MAX Sport brand values for JavaScript.
- *
- * Styling should read the CSS custom properties in `tokens.css`. This entry
- * point exists for the cases a stylesheet cannot cover: Motion transition
- * configs, canvas and map styling, and portal layering.
- *
- * The hex literals here mirror `tokens.css`; `tests/tokens.test.ts` fails the
- * build if the two ever drift.
- */
-
 export const palette = {
   ink: {
     950: "#0e0e0e",
@@ -40,10 +29,8 @@ export const palette = {
   },
 } as const;
 
-/** Court-lime. The only accent either surface is allowed to use. */
 export const ACCENT = palette.lime[500];
 
-/** Charcoal. The only legal text colour on an accent fill. */
 export const ACCENT_ON = palette.ink[900];
 
 export const radius = {

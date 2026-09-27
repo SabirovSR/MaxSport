@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 const ROOT_ROUTES = new Set(["/", "/create", "/passport"]);
 
-/** Keeps the native MAX back button in sync with the current route. */
 export function useBackButton() {
   const navigate = useNavigate();
   const { pathname } = useLocation();

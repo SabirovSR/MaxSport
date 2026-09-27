@@ -1,8 +1,3 @@
-/**
- * Raw calls into the three Yandex HTTP APIs. Each product is a separate
- * package in the Yandex cabinet with its own key.
- */
-
 const SUGGEST_URL = "https://suggest-maps.yandex.ru/v1/suggest";
 const GEOCODER_URL = "https://geocode-maps.yandex.ru/v1/";
 const STATIC_URL = "https://static-maps.yandex.ru/v1";
@@ -16,7 +11,6 @@ export interface GeoSuggestion {
   title: string;
   subtitle?: string;
   address?: string;
-  /** Opaque Yandex handle; feed it back to the geocoder to resolve coordinates. */
   uri?: string;
   distanceM?: number;
 }
@@ -108,8 +102,6 @@ export async function fetchSuggestions(input: {
   url.searchParams.set("results", String(input.results ?? 7));
   url.searchParams.set("print_address", "1");
   url.searchParams.set("attrs", "uri");
-  // Sports halls are usually registered organisations, so bias toward those
-  // plus street addresses rather than whole cities.
   url.searchParams.set("types", "biz,house,street");
   if (input.near) {
     url.searchParams.set("ll", `${input.near.lng},${input.near.lat}`);
@@ -140,8 +132,7 @@ function readFirstGeoObject(data: GeocoderResponse): GeocodeResult | null {
   const position = object?.Point?.pos;
   if (!object || !position) return null;
 
-  // Yandex returns "longitude latitude", which is the opposite of the order
-  // used everywhere else in this codebase.
+  // яндекс отдаёт «долгота широта»
   const [lng, lat] = position.split(" ").map(Number);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
 
@@ -156,7 +147,6 @@ function readFirstGeoObject(data: GeocoderResponse): GeocodeResult | null {
 
 export async function fetchGeocode(input: {
   apiKey: string;
-  /** Either a free-form address, "lng,lat" for reverse lookup, or a suggest uri. */
   geocode?: string;
   uri?: string;
   fetchImpl: FetchLike;

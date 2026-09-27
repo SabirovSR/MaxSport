@@ -7,6 +7,7 @@ import { PlayerChip } from "../components/PlayerChip";
 import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
 import { useToast } from "../components/Toast";
 import { useMe } from "../lib/useMe";
+import { openMaxChat } from "../lib/maxContact";
 
 const STATUS_LABELS: Record<string, string> = {
   expected: "Ожидается",
@@ -47,8 +48,6 @@ export function RosterPage() {
 
   useEffect(load, [load]);
 
-  // The card and the lobby both publish on the same channel, so any booking or
-  // presence change reaches the organiser without a manual refresh.
   useEffect(() => {
     if (!id) return;
     return api.subscribeLobby(id, () => {
@@ -68,7 +67,7 @@ export function RosterPage() {
     setBusy(true);
     try {
       await api.markPresence(slotId, status);
-      showToast("Статус Явки обновлён");
+      showToast("Статус явки обновлён");
       load();
     } catch (cause) {
       const message =
@@ -96,6 +95,37 @@ export function RosterPage() {
       showToast(message, "error");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function notifyPlayers() {
+    if (!id) return;
+    setBusy(true);
+    try {
+      const { sent } = await api.notifyLobbyPlayers(id);
+      showToast(
+        sent === 1
+          ? "Сообщение отправлено участнику"
+          : `Сообщение отправлено ${sent} участникам`
+      );
+    } catch (cause) {
+      const message =
+        cause instanceof Error ? cause.message : "Не удалось написать всем";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function writeToPlayer(entry: RosterEntry) {
+    if (
+      !openMaxChat({
+        username: entry.username,
+        maxUserId: entry.maxUserId,
+      })
+    ) {
+      showToast("Не удалось открыть чат с игроком", "error");
     }
   }
 
@@ -178,7 +208,7 @@ export function RosterPage() {
   const confirmation =
     pendingAction === "kick-player"
       ? {
-          title: "Удалить Игрока?",
+          title: "Удалить игрока?",
           description:
             "Игрок потеряет место в составе, а слот снова станет свободным.",
           confirmLabel: "Удалить",
@@ -188,14 +218,14 @@ export function RosterPage() {
         ? {
             title: "Завершить игру?",
             description:
-              "После завершения откроется голосование за Карму. Вернуться к Ростеру будет нельзя.",
+              "После завершения откроется голосование за карму. Вернуться к ростеру будет нельзя.",
             confirmLabel: "Завершить",
             onConfirm: finishGame,
           }
         : {
             title: "Начать игру?",
             description:
-              "Лобби перейдёт в статус «Идёт игра». Проверьте Явку перед началом.",
+              "Лобби перейдёт в статус «Идёт игра». Проверьте явку перед началом.",
             confirmLabel: "Начинаем",
             onConfirm: startGame,
           };
@@ -248,7 +278,7 @@ export function RosterPage() {
 
       {roster.length === 0 && (
         <EmptyState title="В составе пока никого">
-          <p>Поделитесь Карточкой чата, чтобы собрать Игроков.</p>
+          <p>Поделитесь карточкой чата, чтобы собрать игроков.</p>
         </EmptyState>
       )}
 
@@ -284,6 +314,15 @@ export function RosterPage() {
                 )
               )}
             </div>
+            {entry.userId !== userId && (
+              <button
+                type="button"
+                className="chip"
+                onClick={() => writeToPlayer(entry)}
+              >
+                Написать
+              </button>
+            )}
             {entry.userId !== userId &&
               lobby &&
               ["open", "full", "gathering"].includes(lobby.status) && (
@@ -306,6 +345,14 @@ export function RosterPage() {
       {error && <p className="form-error">{error}</p>}
 
       <div className="sticky-bar">
+        {lobby &&
+          lobby.status !== "finished" &&
+          lobby.status !== "cancelled" &&
+          roster.some((entry) => entry.userId !== userId) && (
+            <Button variant="secondary" loading={busy} onClick={notifyPlayers}>
+              Написать всем
+            </Button>
+          )}
         {lobby?.status !== "started" && lobby?.status !== "finished" && (
           <Button
             variant="primary"
