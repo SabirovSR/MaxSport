@@ -118,13 +118,14 @@ export function RosterPage() {
   }
 
   async function writeToPlayer(entry: RosterEntry) {
-    if (openMaxChat({ username: entry.username })) return;
     if (!id) return;
     setBusy(true);
     try {
       await api.contactLobby(id, entry.userId);
+      openMaxChat({ username: entry.username });
       showToast("Игроку отправлено сообщение в бот");
     } catch (cause) {
+      if (openMaxChat({ username: entry.username })) return;
       const message =
         cause instanceof Error ? cause.message : "Не удалось открыть чат";
       showToast(message, "error");

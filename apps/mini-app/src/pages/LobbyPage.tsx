@@ -192,18 +192,13 @@ export function LobbyPage() {
 
   async function writeToOrganizer() {
     if (!id || !lobby) return;
-    if (
-      openMaxChat({
-        username: lobby.organizer.username,
-      })
-    ) {
-      return;
-    }
     setBusy(true);
     try {
       await api.contactLobby(id);
+      openMaxChat({ username: lobby.organizer.username });
       showToast("Организатору отправлено сообщение в бот");
     } catch (cause) {
+      if (openMaxChat({ username: lobby.organizer.username })) return;
       const message =
         cause instanceof Error
           ? cause.message
@@ -229,7 +224,13 @@ export function LobbyPage() {
           mid = null;
         }
       }
-      const { botUsername } = await api.getConfig();
+      let botUsername = "gov_max_sport_bot";
+      try {
+        const config = await api.getConfig();
+        if (config.botUsername) botUsername = config.botUsername;
+      } catch {
+        // без конфига всё равно соберём ссылку
+      }
       const link = lobbyDeepLink(botUsername, id);
       const text = lobbyShareText({
         sport: SPORT_LABELS[lobby.sport] ?? lobby.sport,
@@ -241,7 +242,7 @@ export function LobbyPage() {
       showToast(
         mode === "clipboard"
           ? "Ссылка скопирована"
-          : "Выберите чат, чтобы отправить игру"
+          : "Ссылка готова — выберите чат или вставьте из буфера"
       );
     } catch (cause) {
       const message =
@@ -531,7 +532,6 @@ export function LobbyPage() {
           Поделиться
         </Button>
         {!isOrganizer &&
-          (mySlot || pendingRequest) &&
           lobby.status !== "cancelled" &&
           lobby.status !== "finished" && (
             <Button

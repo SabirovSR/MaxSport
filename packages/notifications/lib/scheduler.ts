@@ -1,4 +1,5 @@
 import {
+  DomainError,
   ForbiddenError,
   ValidationError,
   type ScheduledJobKind,
@@ -36,6 +37,20 @@ const JOB_OFFSETS: Record<
   reminder_t30: -30,
   venue_ping_t60: -60,
 };
+
+async function deliver(
+  maxApi: MaxApiClient,
+  input: Parameters<MaxApiClient["sendMessage"]>[0]
+) {
+  try {
+    return await maxApi.sendMessage(input);
+  } catch {
+    throw new DomainError(
+      "Бот не смог доставить сообщение. Напишите боту в личку и повторите",
+      "MAX_UPSTREAM"
+    );
+  }
+}
 
 export function createNotificationScheduler(
   pool: Pool,
@@ -261,7 +276,7 @@ export function createNotificationScheduler(
       for (const player of players.rows) {
         const maxUserId = Number(player.max_user_id);
         if (!maxUserId) continue;
-        await maxApi.sendMessage({
+        await deliver(maxApi, {
           userId: maxUserId,
           text: "Организатор пишет участникам лобби. Откройте карточку, если нужно ответить.",
           buttons: [
@@ -296,7 +311,7 @@ export function createNotificationScheduler(
         .join(" ");
       const role = applicant.roleRequired ? ` (${applicant.roleRequired})` : "";
       const botUsername = process.env.BOT_USERNAME ?? "gov_max_sport_bot";
-      await maxApi.sendMessage({
+      await deliver(maxApi, {
         userId: maxUserId,
         text: `Заявка в лобби: ${name}${role} хочет присоединиться. Откройте ростер, чтобы принять или отклонить.`,
         buttons: [
@@ -327,17 +342,7 @@ export function createNotificationScheduler(
       if (!fromIsOrganizer && !toIsOrganizer) {
         throw new ForbiddenError();
       }
-
-      if (toIsOrganizer) {
-        const allowed = await pool.query(
-          `SELECT 1 FROM slots WHERE lobby_id = $1 AND user_id = $2
-           UNION
-           SELECT 1 FROM slot_join_requests
-           WHERE lobby_id = $1 AND user_id = $2 AND status = 'pending'`,
-          [lobbyId, fromUserId]
-        );
-        if (!allowed.rows[0]) throw new ForbiddenError();
-      } else {
+      if (fromIsOrganizer && !toIsOrganizer) {
         const occupant = await pool.query(
           `SELECT 1 FROM slots WHERE lobby_id = $1 AND user_id = $2`,
           [lobbyId, targetId]
@@ -361,7 +366,7 @@ export function createNotificationScheduler(
         .filter(Boolean)
         .join(" ");
       const botUsername = process.env.BOT_USERNAME ?? "gov_max_sport_bot";
-      await maxApi.sendMessage({
+      await deliver(maxApi, {
         userId: maxUserId,
         text: `${name || "Игрок"} хочет написать вам в MAX Sport. Откройте лобби.`,
         buttons: [

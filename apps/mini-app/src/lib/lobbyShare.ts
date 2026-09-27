@@ -16,6 +16,31 @@ export function lobbyShareText(input: {
   return `${input.sport} • ${input.when}\n${input.venue}\n${input.link}`;
 }
 
+export async function copyText(value: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // webview часто режет clipboard api
+  }
+  try {
+    const field = document.createElement("textarea");
+    field.value = value;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.left = "-9999px";
+    document.body.appendChild(field);
+    field.select();
+    const ok = document.execCommand("copy");
+    field.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 export type LobbyShareMode = "card" | "content" | "deeplink" | "clipboard";
 
 export async function openLobbyShare(input: {
@@ -23,29 +48,28 @@ export async function openLobbyShare(input: {
   text: string;
   link: string;
 }): Promise<LobbyShareMode> {
+  const copied = await copyText(input.link);
+
   const share = window.WebApp?.shareMaxContent;
   if (share && input.mid) {
     share({ mid: input.mid });
-    return "card";
+    return copied ? "clipboard" : "card";
   }
   if (share) {
     share({ text: input.text, link: input.link });
-    return "content";
+    return copied ? "clipboard" : "content";
   }
 
   const url = maxShareUrl(input.text);
   if (window.WebApp?.openMaxLink) {
     window.WebApp.openMaxLink(url);
-    return "deeplink";
+    return copied ? "clipboard" : "deeplink";
   }
   if (window.WebApp?.openLink) {
     window.WebApp.openLink(url);
-    return "deeplink";
+    return copied ? "clipboard" : "deeplink";
   }
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(input.link);
-    return "clipboard";
-  }
+  if (copied) return "clipboard";
   window.open(url, "_blank", "noopener,noreferrer");
   return "deeplink";
 }
