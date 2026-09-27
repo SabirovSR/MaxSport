@@ -1,4 +1,3 @@
-/** Court frame with one filled slot. Geometry mirrors packages/brand/assets/mark.svg. */
 export function Mark({ size = 26 }: { size?: number }) {
   return (
     <svg

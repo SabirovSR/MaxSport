@@ -3,10 +3,6 @@ import type { Pool } from "@maxsport/shared";
 import type { VenueRepository } from "@maxsport/venue";
 import { createLobbyService, DEFAULT_NEARBY_RADIUS_M } from "../index.js";
 
-/**
- * list() resolves each row through loadDetails, so returning no rows keeps the
- * assertions on the one query that matters: the feed query itself.
- */
 function serviceWithSpy() {
   const query = vi.fn(async () => ({ rows: [] }));
   const pool = { query } as unknown as Pool;
@@ -92,13 +88,7 @@ describe("lobby feed with a position", () => {
     });
     const { sql, params } = lastCall(query);
 
-    expect(params).toEqual([
-      "volleyball",
-      "amateur",
-      37.6173,
-      55.7558,
-      2000,
-    ]);
+    expect(params).toEqual(["volleyball", "amateur", 37.6173, 55.7558, 2000]);
     expect(sql).toContain("l.sport = $1");
     expect(sql).toContain("l.game_level = $2");
     expect(sql).toContain("ST_MakePoint($3, $4)");

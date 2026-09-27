@@ -55,14 +55,11 @@ export interface ListLobbiesFilter {
   sport?: Sport;
   gameLevel?: GameLevel;
   hotOnly?: boolean;
-  /** Supplying both turns on distance calculation and distance ordering. */
   userLat?: number;
   userLng?: number;
-  /** Only meaningful alongside a position. Omit to measure without filtering. */
   radiusM?: number;
 }
 
-/** Matches the "рядом" chip in the Mini App feed. */
 export const DEFAULT_NEARBY_RADIUS_M = 5000;
 
 export interface LobbyService {
@@ -169,6 +166,10 @@ function mapSlot(row: Record<string, unknown>): Slot {
           firstName: row.occupant_first_name as string,
           lastName: row.occupant_last_name as string | null,
           photoUrl: row.occupant_photo_url as string | null,
+          username: (row.occupant_username as string | null) ?? null,
+          maxUserId: row.occupant_max_user_id
+            ? Number(row.occupant_max_user_id)
+            : undefined,
         }
       : null,
   };
@@ -216,7 +217,9 @@ async function loadDetails(
     `SELECT s.id, s.lobby_id, s.role_required, s.user_id, s.version, s.slot_index,
             u.first_name AS occupant_first_name,
             u.last_name AS occupant_last_name,
-            u.photo_url AS occupant_photo_url
+            u.photo_url AS occupant_photo_url,
+            u.username AS occupant_username,
+            u.max_user_id AS occupant_max_user_id
      FROM slots s
      LEFT JOIN users u ON u.id = s.user_id
      WHERE s.lobby_id = $1
@@ -261,6 +264,36 @@ function nextLobbyStatus(filled: number, total: number): LobbyStatus {
   return filled >= total ? "full" : "open";
 }
 
+const DUPLICATE_EVENT_MESSAGE =
+  "Такое лобби уже есть: та же площадка, время и вид спорта";
+
+async function assertUniqueActiveEvent(
+  client: Pool | PoolClient,
+  input: {
+    venueId: string;
+    startAt: Date;
+    sport: string;
+    excludeId?: string;
+  }
+) {
+  const params: unknown[] = [
+    input.venueId,
+    input.startAt.toISOString(),
+    input.sport,
+  ];
+  let sql = `SELECT id FROM lobbies
+     WHERE venue_id = $1 AND start_at = $2 AND sport = $3
+       AND status NOT IN ('cancelled', 'finished')`;
+  if (input.excludeId) {
+    params.push(input.excludeId);
+    sql += ` AND id <> $${params.length}`;
+  }
+  const result = await client.query(`${sql} LIMIT 1`, params);
+  if (result.rows[0]) {
+    throw new ValidationError(DUPLICATE_EVENT_MESSAGE);
+  }
+}
+
 export function createLobbyService(
   pool: Pool,
   venues: VenueRepository
@@ -280,7 +313,7 @@ export function createLobbyService(
         throw new ValidationError("Некорректный режим вступления");
       }
       if (input.slotCount < 2) {
-        throw new ValidationError("Минимум 2 слота в Лобби");
+        throw new ValidationError("Минимум 2 слота в лобби");
       }
       if (
         (input.roleSlots ?? []).some(
@@ -303,29 +336,42 @@ export function createLobbyService(
         throw new ValidationError("Некорректная дата начала");
       }
       if (input.startAt.getTime() < Date.now() - 5 * 60 * 1000) {
-        throw new ValidationError("Нельзя создать Лобби в прошлом");
+        throw new ValidationError("Нельзя создать лобби в прошлом");
       }
 
       return withTransaction(pool, async (client) => {
-        const lobbyResult = await client.query(
-          `INSERT INTO lobbies
+        await assertUniqueActiveEvent(client, {
+          venueId: input.venueId,
+          startAt: input.startAt,
+          sport: input.sport,
+        });
+        let lobbyResult;
+        try {
+          lobbyResult = await client.query(
+            `INSERT INTO lobbies
            (sport, game_level, status, start_at, is_recurring, venue_id, organizer_id,
             rent_total, deposit_enabled, slot_count, join_mode)
            VALUES ($1, $2, 'open', $3, $4, $5, $6, $7, $8, $9, $10)
            RETURNING *`,
-          [
-            input.sport,
-            input.gameLevel,
-            input.startAt.toISOString(),
-            input.isRecurring ?? false,
-            input.venueId,
-            input.organizerId,
-            input.rentTotal,
-            depositEnabled,
-            input.slotCount,
-            input.joinMode ?? "instant",
-          ]
-        );
+            [
+              input.sport,
+              input.gameLevel,
+              input.startAt.toISOString(),
+              input.isRecurring ?? false,
+              input.venueId,
+              input.organizerId,
+              input.rentTotal,
+              depositEnabled,
+              input.slotCount,
+              input.joinMode ?? "instant",
+            ]
+          );
+        } catch (error) {
+          if (isUniqueViolation(error)) {
+            throw new ValidationError(DUPLICATE_EVENT_MESSAGE);
+          }
+          throw error;
+        }
         const lobby = mapLobby(lobbyResult.rows[0]!);
         const roleMap = new Map(
           (input.roleSlots ?? []).map((r) => [r.index, r.role])
@@ -398,7 +444,7 @@ export function createLobbyService(
         typeof userLng === "number" &&
         Number.isFinite(userLng)
       ) {
-        // ST_MakePoint takes (x, y), so longitude comes first.
+        // st_makepoint: сначала долгота
         params.push(userLng, userLat);
         const origin = `ST_SetSRID(ST_MakePoint($${params.length - 1}, $${params.length}), 4326)::geography`;
         distanceSelect = `ST_Distance(v.location, ${origin}) AS distance_m`;
@@ -845,10 +891,10 @@ export function createLobbyService(
         const lobby = mapLobby(result.rows[0]);
         if (lobby.organizerId !== organizerId) throw new ForbiddenError();
         if (!["open", "full", "gathering"].includes(lobby.status)) {
-          throw new ValidationError("Это Лобби уже нельзя редактировать");
+          throw new ValidationError("Это лобби уже нельзя редактировать");
         }
         if (patch.startAt && patch.startAt.getTime() < Date.now()) {
-          throw new ValidationError("Нельзя перенести Лобби в прошлое");
+          throw new ValidationError("Нельзя перенести лобби в прошлое");
         }
         if (
           patch.gameLevel != null &&
@@ -949,8 +995,15 @@ export function createLobbyService(
           rentTotal > 0
             ? (patch.depositEnabled ?? lobby.depositEnabled)
             : false;
-        await client.query(
-          `UPDATE lobbies SET
+        await assertUniqueActiveEvent(client, {
+          venueId: patch.venueId ?? lobby.venueId,
+          startAt: patch.startAt ?? lobby.startAt,
+          sport: lobby.sport,
+          excludeId: lobbyId,
+        });
+        try {
+          await client.query(
+            `UPDATE lobbies SET
              start_at = $1,
              venue_id = $2,
              game_level = $3,
@@ -960,20 +1013,26 @@ export function createLobbyService(
              join_mode = $7,
              status = $8
            WHERE id = $9`,
-          [
-            (patch.startAt ?? lobby.startAt).toISOString(),
-            patch.venueId ?? lobby.venueId,
-            patch.gameLevel ?? lobby.gameLevel,
-            rentTotal,
-            depositEnabled,
-            nextSlotCount,
-            patch.joinMode ?? lobby.joinMode,
-            lobby.status === "gathering"
-              ? "gathering"
-              : nextLobbyStatus(occupiedCount, nextSlotCount),
-            lobbyId,
-          ]
-        );
+            [
+              (patch.startAt ?? lobby.startAt).toISOString(),
+              patch.venueId ?? lobby.venueId,
+              patch.gameLevel ?? lobby.gameLevel,
+              rentTotal,
+              depositEnabled,
+              nextSlotCount,
+              patch.joinMode ?? lobby.joinMode,
+              lobby.status === "gathering"
+                ? "gathering"
+                : nextLobbyStatus(occupiedCount, nextSlotCount),
+              lobbyId,
+            ]
+          );
+        } catch (error) {
+          if (isUniqueViolation(error)) {
+            throw new ValidationError(DUPLICATE_EVENT_MESSAGE);
+          }
+          throw error;
+        }
         return loadDetails(client, lobbyId);
       });
     },

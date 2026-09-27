@@ -38,7 +38,6 @@ export class UnauthorizedError extends DomainError {
   }
 }
 
-/** Maps domain codes to HTTP so the Mini App can branch on status, not text. */
 export function httpStatusForDomainError(error: DomainError): number {
   switch (error.code) {
     case "UNAUTHORIZED":

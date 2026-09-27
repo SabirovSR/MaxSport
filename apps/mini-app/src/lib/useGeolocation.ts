@@ -11,11 +11,6 @@ type State =
   | { status: "granted"; position: Position }
   | { status: "denied"; reason: string };
 
-/**
- * Geolocation is an enhancement here, never a gate: the feed and the presence
- * check both work without it. Nothing is requested until the user asks for
- * something that needs a position.
- */
 export function useGeolocation() {
   const [state, setState] = useState<State>({ status: "idle" });
 

@@ -30,11 +30,7 @@ const state = {
     status: "open",
     startAt: "2026-09-24T18:00:00.000Z",
     organizer: me,
-    slots: [
-      occupied(0, "Связующий", me),
-      free(1, "Либеро"),
-      free(2, null),
-    ],
+    slots: [occupied(0, "Связующий", me), free(1, "Либеро"), free(2, null)],
   }),
   approval: makeLobby({
     id: "lobby-approval",
@@ -131,6 +127,7 @@ const server = http.createServer((req, res) => {
       passport: {
         user: me,
         badges: [],
+        kudos: [{ tag: "крутой пас", votes: 2 }],
         attendancePct: 90,
         sportSkills: state.skills,
       },
@@ -209,7 +206,9 @@ const server = http.createServer((req, res) => {
           : null;
         return json(res, 200, { ok: true });
       }
-      return json(res, 200, { request: id === "lobby-approval" ? state.request : null });
+      return json(res, 200, {
+        request: id === "lobby-approval" ? state.request : null,
+      });
     }
     if (rest === "/join-requests") {
       return json(res, 200, {
@@ -227,8 +226,12 @@ const server = http.createServer((req, res) => {
       return json(res, 200, { lobby });
     }
     if (rest.endsWith("/reject")) {
-      if (state.request) state.request = { ...state.request, status: "rejected" };
+      if (state.request)
+        state.request = { ...state.request, status: "rejected" };
       return json(res, 200, { ok: true });
+    }
+    if (rest === "/notify-players" && method === "POST") {
+      return json(res, 200, { sent: 1 });
     }
     if (rest === "/karma/status") {
       return json(res, 200, {

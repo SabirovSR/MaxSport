@@ -15,7 +15,7 @@ import { useGeolocation } from "../lib/useGeolocation";
 import { formatStartAt, initialsOf } from "../lib/format";
 import { refreshMe } from "../lib/useMe";
 
-/** Окно Явки: PRODUCT §4.6 opens it at T−20 and closes it at T+15. */
+// окно явки: −20 мин / +15 мин
 const WINDOW_OPENS_MS = -20 * 60 * 1000;
 const WINDOW_CLOSES_MS = 15 * 60 * 1000;
 
@@ -51,7 +51,6 @@ export function PassportPage() {
       .then(([passportData, lobbiesData]) => {
         setPassport(passportData.passport);
         const userId = passportData.passport.user.id;
-        // Only a lobby the player actually occupies can be checked into.
         const mine = lobbiesData.lobbies
           .filter((lobby) => lobby.slots.some((slot) => slot.userId === userId))
           .sort((a, b) => a.startAt.localeCompare(b.startAt));
@@ -72,7 +71,7 @@ export function PassportPage() {
     setBusy(true);
     setError(null);
     try {
-      // Geo is an enhancement: a refusal still allows the one tap confirmation.
+      // отказ гео не блокирует «я на месте»
       const position = geo.position ?? (await geo.request());
       await api.confirmOnSite(mySlot.id, position ?? undefined);
       refreshMe();
@@ -337,14 +336,29 @@ export function PassportPage() {
       <h3 className="section-title" style={{ marginTop: "var(--ms-space-6)" }}>
         Бейджи
       </h3>
-      {passport.badges.length === 0 ? (
-        <p className="muted">Бейджи появятся после сыгранных матчей.</p>
+      {passport.badges.length === 0 && (passport.kudos ?? []).length === 0 ? (
+        <p className="muted">
+          Оценки от других игроков появятся здесь после матча — если кто-то
+          решит вас отметить.
+        </p>
       ) : (
-        passport.badges.map((badge) => (
-          <span key={badge.code} className="badge" title={badge.description}>
-            {badge.title}
-          </span>
-        ))
+        <div className="chips" style={{ marginBottom: 0 }}>
+          {passport.badges.map((badge) => (
+            <span key={badge.code} className="badge" title={badge.description}>
+              {badge.title}
+            </span>
+          ))}
+          {(passport.kudos ?? []).map((item) => (
+            <span
+              key={item.tag}
+              className="badge"
+              title="Оценка от игроков после матча"
+            >
+              {item.tag}
+              {item.votes > 1 ? ` · ${item.votes}` : ""}
+            </span>
+          ))}
+        </div>
       )}
 
       {error && <p className="form-error">{error}</p>}

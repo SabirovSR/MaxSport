@@ -22,7 +22,6 @@ export function refreshMe() {
   subscribers.forEach((notify) => notify());
 }
 
-/** Identity of the signed-in Игрок, shared across screens after one request. */
 export function useMe() {
   const [me, setMe] = useState<Passport | null>(null);
   const [error, setError] = useState<string | null>(null);

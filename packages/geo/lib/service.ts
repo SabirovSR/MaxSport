@@ -10,7 +10,6 @@ import {
 } from "./yandex.js";
 
 export interface GeoConfig {
-  /** Public by design: it ships to the browser and is restricted by referrer. */
   jsApiKey: string;
   suggestKey: string;
   geocoderKey: string;
@@ -20,7 +19,6 @@ export interface GeoConfig {
 }
 
 export interface GeoService {
-  /** The one key that may leave the server. Empty string when unconfigured. */
   jsApiKey(): string;
   suggest(input: {
     text: string;
@@ -77,8 +75,6 @@ export function createGeoService(config: GeoConfig): GeoService {
     maxEntries: 1000,
   });
 
-  // Typing "ФОК Центральный" is ~15 keystrokes, so the suggest budget has to
-  // absorb a full query while still capping a runaway client.
   const suggestLimiter = createRateLimiter({ limit: 40, windowMs: 60_000 });
   const geocodeLimiter = createRateLimiter({ limit: 20, windowMs: 60_000 });
   const staticLimiter = createRateLimiter({ limit: 30, windowMs: 60_000 });

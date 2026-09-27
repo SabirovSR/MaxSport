@@ -28,11 +28,6 @@ const STEPS = [
   },
 ];
 
-/**
- * Each card pins until the last one arrives, and the previous card shrinks
- * as the next one covers it. That is the product cycle as a physical stack,
- * not a numbered list of stages.
- */
 export function HowItWorks() {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();

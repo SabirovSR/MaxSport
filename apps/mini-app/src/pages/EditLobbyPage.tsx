@@ -86,7 +86,7 @@ export function EditLobbyPage() {
           role,
         })),
       });
-      showToast("Изменения Лобби сохранены");
+      showToast("Изменения лобби сохранены");
       navigate(`/lobby/${id}`, { replace: true });
     } catch (cause) {
       const message =

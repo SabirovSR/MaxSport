@@ -62,6 +62,8 @@ export interface PublicPlayer {
   firstName: string;
   lastName: string | null;
   photoUrl: string | null;
+  username?: string | null;
+  maxUserId?: number;
 }
 
 export interface SportSkill {
@@ -115,7 +117,6 @@ export interface LobbyWithDetails extends Lobby {
   slots: Slot[];
   filledCount: number;
   splitPerPlayer: number;
-  /** Metres from the caller's position. Absent when no position was supplied. */
   distanceM?: number;
 }
 

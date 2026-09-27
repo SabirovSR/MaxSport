@@ -1,4 +1,8 @@
-import type { ScheduledJobKind } from "@maxsport/shared";
+import {
+  ForbiddenError,
+  ValidationError,
+  type ScheduledJobKind,
+} from "@maxsport/shared";
 import type { MaxApiClient } from "@maxsport/max-channel";
 import type { Pool } from "@maxsport/shared";
 
@@ -7,6 +11,7 @@ export interface NotificationScheduler {
   stop(): void;
   scheduleLobbyJobs(lobbyId: string, startAt: Date): Promise<void>;
   rescheduleLobbyJobs(lobbyId: string, startAt: Date): Promise<void>;
+  notifyLobbyPlayers(lobbyId: string, organizerId: string): Promise<number>;
 }
 
 const JOB_OFFSETS: Record<
@@ -200,9 +205,7 @@ export function createNotificationScheduler(
     start() {
       if (timer) return;
       timer = setInterval(() => {
-        // A rejection here used to surface as an unhandled rejection, which
-        // takes the whole API process down. The tick runs again in 30s, so a
-        // transient database or MAX API failure should just be logged.
+        // ошибка тика не роняет процесс
         processDueJobs().catch((error) => {
           console.error("Notification tick failed", error);
         });
@@ -218,6 +221,52 @@ export function createNotificationScheduler(
         lobbyId,
       ]);
       await enqueueJobs(lobbyId, startAt);
+    },
+    async notifyLobbyPlayers(lobbyId, organizerId) {
+      const lobby = await pool.query(
+        `SELECT organizer_id, status, sport FROM lobbies WHERE id = $1`,
+        [lobbyId]
+      );
+      if (!lobby.rows[0]) throw new ValidationError("Лобби не найдено");
+      if (lobby.rows[0].organizer_id !== organizerId) {
+        throw new ForbiddenError();
+      }
+      if (["cancelled", "finished"].includes(lobby.rows[0].status as string)) {
+        throw new ValidationError("После игры писать всем уже не нужно");
+      }
+      const players = await pool.query(
+        `SELECT u.max_user_id
+         FROM slots s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.lobby_id = $1
+           AND s.user_id IS NOT NULL
+           AND s.user_id <> $2`,
+        [lobbyId, organizerId]
+      );
+      const botUsername = process.env.BOT_USERNAME ?? "gov_max_sport_bot";
+      let sent = 0;
+      for (const player of players.rows) {
+        const maxUserId = Number(player.max_user_id);
+        if (!maxUserId) continue;
+        await maxApi.sendMessage({
+          userId: maxUserId,
+          text: "Организатор пишет участникам лобби. Откройте карточку, если нужно ответить.",
+          buttons: [
+            [
+              {
+                type: "open_app",
+                text: "Открыть лобби",
+                url: `https://max.ru/${botUsername}?startapp=lobby_${lobbyId}`,
+              },
+            ],
+          ],
+        });
+        sent += 1;
+      }
+      if (sent === 0) {
+        throw new ValidationError("Пока некому написать: в составе только вы");
+      }
+      return sent;
     },
   };
 }

@@ -4,7 +4,6 @@ export interface TtlCache<T> {
   readonly size: number;
 }
 
-/** Insertion-ordered Map doubles as the LRU list: re-inserting moves to newest. */
 export function createTtlCache<T>(options: {
   ttlMs: number;
   maxEntries: number;
@@ -46,10 +45,7 @@ export interface RateLimiter {
   take(key: string): boolean;
 }
 
-/**
- * Sliding window, per key. Geosuggest fires on every keystroke, so without
- * this a single user holding down a key can burn the daily Yandex quota.
- */
+// лимит на ключ, чтобы не сжечь квоту яндекса
 export function createRateLimiter(options: {
   limit: number;
   windowMs: number;

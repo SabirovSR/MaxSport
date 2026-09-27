@@ -12,12 +12,6 @@ export interface ResolvedVenue {
 
 const DEBOUNCE_MS = 300;
 
-/**
- * Replaces the previous prompt() flow, which pinned every new Площадка to the
- * centre of Moscow. Address text comes from Геосаджест, coordinates from the
- * Геокодер, and the pin stays draggable because a hall entrance is often not
- * where the geocoder puts it.
- */
 export function VenuePicker({
   saved,
   near,
@@ -48,7 +42,7 @@ export function VenuePicker({
       api
         .suggestPlaces(text, near ?? undefined)
         .then((data) => {
-          // A slower earlier keystroke must not overwrite newer results.
+          // старый ответ не затирает новый
           if (id === requestId.current) setSuggestions(data.suggestions);
         })
         .catch((cause: Error) => {

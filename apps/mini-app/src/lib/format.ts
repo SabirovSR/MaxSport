@@ -12,14 +12,13 @@ export function readMySports(): string[] {
   }
 }
 
-/** The "мои виды спорта" chip reads this set; creating or filtering a sport writes it. */
 export function rememberSport(code: string) {
   try {
     const current = readMySports();
     if (current.includes(code)) return;
     localStorage.setItem(MY_SPORTS_KEY, JSON.stringify([...current, code]));
   } catch {
-    // Private mode: the chip simply stays empty.
+    // localstorage может быть закрыт
   }
 }
 
@@ -28,7 +27,7 @@ export function forgetSport(code: string) {
     const next = readMySports().filter((item) => item !== code);
     localStorage.setItem(MY_SPORTS_KEY, JSON.stringify(next));
   } catch {
-    // Private mode: there is nothing persistent to update.
+    // localstorage может быть закрыт
   }
 }
 
@@ -101,7 +100,6 @@ const SLOT_PLURAL: Record<SlotCase, string> = {
   prepositional: "слотах",
 };
 
-/** Слово «слот» без числительного: «остальные слоты», «по слотам». */
 export function slotNoun(
   plural = false,
   form: SlotCase = "nominative"
@@ -116,7 +114,13 @@ export function formatSlots(
   return `${count} ${slotWord(count, form)}`;
 }
 
-/** Сколько слотов осталось свободными. */
 export function pluralSlots(count: number): string {
   return formatSlots(count, "nominative");
+}
+
+export function parseCount(raw: string): number {
+  const digits = raw.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+  if (!digits) return 0;
+  const value = Number(digits);
+  return Number.isFinite(value) ? value : 0;
 }

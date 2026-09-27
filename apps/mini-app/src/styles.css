@@ -1,20 +1,9 @@
 @import "@maxsport/brand/tokens.css";
 
-/*
- * The Mini App follows the MAX client theme, so [data-ms-theme] is set from
- * the Bridge colour scheme in main.tsx and the light token set applies there.
- * Everything below reads semantic tokens only.
- */
-
 * {
   box-sizing: border-box;
 }
 
-/*
- * MAX resizes the Mini App webview independently of the device zoom. If the
- * root font-size is left to the client (or to MaxUI), rem-based type and
- * token-based type grow at different rates and headings wrap unevenly.
- */
 html {
   font-size: 16px;
   height: 100%;
@@ -48,8 +37,6 @@ body {
   box-shadow: var(--ms-focus-ring);
   border-radius: var(--ms-radius-xs);
 }
-
-/* ---- Layout ---------------------------------------------------------- */
 
 .app-shell {
   display: flex;
@@ -112,8 +99,6 @@ body {
   font-size: var(--ms-text-caption);
 }
 
-/* ---- Avatar ---------------------------------------------------------- */
-
 .avatar {
   width: 40px;
   height: 40px;
@@ -144,8 +129,6 @@ body {
   height: 100%;
   border: 2px solid var(--ms-surface-base);
 }
-
-/* ---- Chips ----------------------------------------------------------- */
 
 .chips {
   display: flex;
@@ -187,8 +170,6 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
-/* ---- Cards ----------------------------------------------------------- */
 
 .lobby-card {
   display: block;
@@ -253,8 +234,6 @@ body {
   text-transform: uppercase;
   letter-spacing: var(--ms-tracking-wide);
 }
-
-/* ---- Slot matrix ------------------------------------------------------ */
 
 .slot-grid {
   display: grid;
@@ -331,8 +310,6 @@ body {
   min-width: max-content;
   white-space: nowrap;
 }
-
-/* ---- Map -------------------------------------------------------------- */
 
 .map-frame {
   position: relative;
@@ -456,8 +433,6 @@ body {
   overflow-wrap: anywhere;
 }
 
-/* ---- Bottom sheet ------------------------------------------------------ */
-
 .sheet-backdrop {
   position: fixed;
   inset: 0;
@@ -507,8 +482,6 @@ body {
   overflow: visible;
   text-overflow: unset;
 }
-
-/* ---- Page actions (in flow, never overlay the tabbar) ----------------- */
 
 .sticky-bar {
   display: grid;
@@ -570,8 +543,6 @@ body {
   }
 }
 
-/* ---- Bottom navigation --------------------------------------------------- */
-
 .tabbar {
   flex: 0 0 auto;
   z-index: var(--ms-layer-nav);
@@ -601,8 +572,6 @@ body {
   width: 20px;
   height: 20px;
 }
-
-/* ---- Forms ---------------------------------------------------------------- */
 
 .form-group {
   margin-bottom: var(--ms-space-4);
@@ -638,6 +607,17 @@ body {
   border-color: var(--ms-accent);
 }
 
+.form-group input[type="number"],
+.form-group input[inputmode="numeric"] {
+  appearance: textfield;
+}
+
+.form-group input[type="number"]::-webkit-outer-spin-button,
+.form-group input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
 .form-hint {
   margin: var(--ms-space-2) 0 0;
   color: var(--ms-text-muted);
@@ -659,8 +639,6 @@ body {
 .checkbox-row input {
   width: auto;
 }
-
-/* ---- Suggest list ---------------------------------------------------------- */
 
 .suggest {
   position: relative;
@@ -703,8 +681,6 @@ body {
   margin-top: 2px;
 }
 
-/* ---- Wizard --------------------------------------------------------------- */
-
 .wizard-progress {
   display: flex;
   gap: var(--ms-space-1);
@@ -721,8 +697,6 @@ body {
 .wizard-progress span.is-done {
   background: var(--ms-accent);
 }
-
-/* ---- Roster ---------------------------------------------------------------- */
 
 .roster-item {
   display: flex;
@@ -757,8 +731,6 @@ body {
   margin: 0 var(--ms-space-2) var(--ms-space-2) 0;
 }
 
-/* ---- Stats ------------------------------------------------------------------ */
-
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -788,8 +760,6 @@ body {
   color: var(--ms-text-muted);
   font-size: var(--ms-text-micro);
 }
-
-/* ---- Skeletons ----------------------------------------------------------------- */
 
 .skeleton {
   border-radius: var(--ms-radius-md);
@@ -877,8 +847,6 @@ body {
 .hold-list li + li {
   margin-top: var(--ms-space-1);
 }
-
-/* ---- Empty state ------------------------------------------------------------------ */
 
 .empty-state {
   display: grid;

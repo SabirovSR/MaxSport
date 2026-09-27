@@ -4,13 +4,6 @@ import * as ReactDOM from "react-dom";
 import type { ComponentType, ReactNode } from "react";
 import { api } from "../api";
 
-/**
- * The JS API is distributed only as a script tag and lives on a global, so it
- * cannot be a normal dependency. The key is fetched at runtime from
- * /api/config rather than baked in at build time, which keeps key rotation off
- * the Docker rebuild path.
- */
-
 export interface LngLat extends Array<number> {
   0: number;
   1: number;
@@ -93,8 +86,6 @@ async function initialise(): Promise<YandexMapApi> {
   ]);
 
   const reactify = imported.reactify.bindTo(React, ReactDOM);
-  // reactify.module() is dynamic by nature; YandexMapApi above pins the shape
-  // this app actually consumes so call sites stay typed.
   const components = reactify.module(ymaps3) as unknown as Omit<
     YandexMapApi,
     "useDefault"
@@ -106,7 +97,7 @@ async function initialise(): Promise<YandexMapApi> {
 export function loadYandexMaps(): Promise<YandexMapApi> {
   if (!pending) {
     pending = initialise().catch((error) => {
-      // Allow a later retry instead of caching the failure forever.
+      // ошибку не кэшировать
       pending = null;
       throw error;
     });

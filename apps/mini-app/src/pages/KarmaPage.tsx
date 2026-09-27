@@ -28,7 +28,6 @@ const RELIABILITY = [
 
 type Reliability = (typeof RELIABILITY)[number]["value"];
 
-/** Presence already knows who showed up, so the vote starts pre-filled. */
 function suggestedReliability(status: string): Reliability {
   if (status === "on_site") return "on_time";
   if (status === "no_show" || status === "cancelled") return "no_show";
@@ -97,7 +96,6 @@ export function KarmaPage() {
   if (!roster) return <LineSkeleton count={5} />;
 
   const tags = TAGS_BY_SPORT[lobby?.sport ?? "volleyball"] ?? [];
-  // Нет самоголосованию: PRODUCT §4.7.
   const others = roster.filter((entry) => entry.userId !== userId);
   const remaining = others.filter((entry) => !voted[entry.userId]);
 
@@ -113,8 +111,8 @@ export function KarmaPage() {
 
   if (remaining.length === 0) {
     return (
-      <EmptyState title="Спасибо, Карма обновлена">
-        <p>Бейдж «Спасатель матча» начисляется автоматически.</p>
+      <EmptyState title="Спасибо, карма обновлена">
+        <p>Отметки за игру появятся в паспорте у тех, кого вы оценили.</p>
         <Link to="/passport">
           <Button>В Игровой паспорт</Button>
         </Link>
@@ -126,7 +124,8 @@ export function KarmaPage() {
     <>
       <h2 className="section-title">Как сыграли?</h2>
       <p className="muted" style={{ marginTop: 0 }}>
-        Осталось оценить: {remaining.length}. Надёжность подставлена из Явки.
+        Осталось оценить: {remaining.length}. Оценивать не обязательно:
+        надёжность подставлена из явки.
       </p>
 
       {remaining.map((entry) => (

@@ -33,9 +33,7 @@ interface ApiDeps {
 
 function handleError(error: unknown) {
   if (error instanceof YandexGeoError) {
-    // An upstream map failure is not the client's fault, and the Yandex status
-    // must not be forwarded verbatim: a 403 there means our key is bad, which
-    // would read as "you are not authorised" to the caller.
+    // 403 яндекса не отдавать клиенту
     return {
       statusCode: 502,
       body: {
@@ -53,7 +51,6 @@ function handleError(error: unknown) {
   if (error instanceof UnauthorizedError) {
     return { statusCode: 401, body: { error: error.message } };
   }
-  // BUG-018: Unknown errors should still produce structured JSON, not HTML.
   console.error(error);
   return { statusCode: 500, body: { error: "Внутренняя ошибка сервера" } };
 }
@@ -77,7 +74,6 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
         nearbyOnly?: string;
         radiusM?: string;
       };
-      // A position alone only measures distance; "рядом" is what filters.
       const nearbyOnly = query.nearbyOnly === "true";
       const lobbies = await deps.lobbies.list({
         sport: query.sport as never,
@@ -376,11 +372,21 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
       const user = await requireAuth(request, deps.pool, deps.botToken);
       const { id } = request.params as { id: string };
       const lobby = await deps.lobbies.cancelLobby(id, user.id);
-      // The chat card must lose its join buttons, and anyone watching the
-      // lobby in the Mini App should see the change without a refresh.
       await deps.chatCard.syncCard(id);
       await deps.realtime.publishLobbyUpdate(id, lobby);
       return reply.send({ lobby });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
+  app.post("/api/lobbies/:id/notify-players", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const { id } = request.params as { id: string };
+      const sent = await deps.notifications.notifyLobbyPlayers(id, user.id);
+      return reply.send({ sent });
     } catch (error) {
       const mapped = handleError(error);
       return reply.status(mapped.statusCode).send(mapped.body);
@@ -616,10 +622,7 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
     }
   });
 
-  // The JS API key is the only Yandex key that may reach the browser: it is
-  // restricted by HTTP referrer in the Yandex cabinet. Geosuggest, Geocoder
-  // and Static keys are not, so those stay behind the proxy routes below.
-  // Serving the key at runtime also means rotating it needs no image rebuild.
+  // в браузер только js-ключ яндекса
   app.get("/api/config", async (request, reply) => {
     try {
       await requireAuth(request, deps.pool, deps.botToken);
@@ -729,8 +732,7 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
   });
 
   app.get("/api/lobbies/:id/stream", async (request, reply) => {
-    // Authenticate before writeHead, otherwise an auth error cannot be
-    // reported as a normal JSON response.
+    // сначала auth, потом поток
     try {
       await requireAuth(request, deps.pool, deps.botToken);
     } catch (error) {
@@ -750,8 +752,7 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     });
 
-    // Without traffic the reverse proxy drops an idle stream, which would kill
-    // the live counter mid-demo.
+    // ping, чтобы прокси не закрыл sse
     const heartbeat = setInterval(() => reply.raw.write(": ping\n\n"), 25_000);
 
     request.raw.on("close", () => {

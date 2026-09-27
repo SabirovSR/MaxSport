@@ -12,6 +12,8 @@ export interface RosterEntry {
   firstName: string;
   lastName: string | null;
   photoUrl: string | null;
+  username: string | null;
+  maxUserId: number;
   roleRequired: string | null;
   status: PresenceStatus;
   updatedAt: Date;
@@ -53,7 +55,8 @@ export function createPresenceService(pool: Pool): PresenceService {
     async getRoster(lobbyId) {
       const result = await pool.query(
         `SELECT pr.slot_id, pr.user_id, pr.status, pr.updated_at,
-                u.first_name, u.last_name, u.photo_url, s.role_required
+                u.first_name, u.last_name, u.photo_url, u.username, u.max_user_id,
+                s.role_required
          FROM presence_records pr
          JOIN users u ON u.id = pr.user_id
          JOIN slots s ON s.id = pr.slot_id
@@ -69,6 +72,8 @@ export function createPresenceService(pool: Pool): PresenceService {
         firstName: row.first_name as string,
         lastName: row.last_name as string | null,
         photoUrl: row.photo_url as string | null,
+        username: (row.username as string | null) ?? null,
+        maxUserId: Number(row.max_user_id),
         roleRequired: row.role_required as string | null,
         status: row.status as PresenceStatus,
         updatedAt: new Date(row.updated_at as string),

@@ -23,6 +23,7 @@ import {
   pluralSlots,
 } from "../lib/format";
 import { canEditLobby, canJoinLobby, canRateLobby } from "../lib/lobbyActions";
+import { openMaxChat } from "../lib/maxContact";
 
 const HOLD_LABELS: Record<string, string> = {
   hold_pending: "Ожидает залог",
@@ -32,6 +33,26 @@ const HOLD_LABELS: Record<string, string> = {
   released: "Возвращён",
   forfeit: "Удержан за неявку",
 };
+
+function summarizeHolds(holds: PaymentHold[]) {
+  const groups = new Map<
+    string,
+    { status: string; amount: number; count: number }
+  >();
+  for (const hold of holds) {
+    const key = `${hold.status}:${hold.amount}`;
+    const current = groups.get(key);
+    if (current) current.count += 1;
+    else {
+      groups.set(key, {
+        status: hold.status,
+        amount: hold.amount,
+        count: 1,
+      });
+    }
+  }
+  return [...groups.values()];
+}
 
 type PendingAction = "release-slot" | "cancel-lobby" | null;
 
@@ -179,7 +200,7 @@ export function LobbyPage() {
         window.WebApp.shareMaxContent({ mid });
         showToast("Карточка готова к отправке");
       } else {
-        const message = "Поделиться Карточкой чата можно только внутри MAX";
+        const message = "Поделиться карточкой чата можно только внутри MAX";
         setError(message);
         showToast(message, "error");
       }
@@ -241,7 +262,7 @@ export function LobbyPage() {
       showToast("Лобби отменено", "info");
     } catch (cause) {
       const message =
-        cause instanceof Error ? cause.message : "Не удалось отменить Лобби";
+        cause instanceof Error ? cause.message : "Не удалось отменить лобби";
       setError(message);
       showToast(message, "error");
     } finally {
@@ -272,16 +293,15 @@ export function LobbyPage() {
           onConfirm: releaseMySlot,
         }
       : {
-          title: "Отменить Лобби?",
+          title: "Отменить лобби?",
           description:
-            "Лобби будет закрыто для всех Игроков. Это действие нельзя отменить.",
-          confirmLabel: "Отменить Лобби",
+            "Лобби будет закрыто для всех игроков. Это действие нельзя отменить.",
+          confirmLabel: "Отменить лобби",
           onConfirm: cancelLobby,
         };
 
   function join() {
     if (!userId || busy || alreadyInLobby()) return;
-    // Only ask which Амплуа when the answer is genuinely ambiguous.
     if (freeRoles.length > 1) {
       setPicking(true);
       return;
@@ -374,7 +394,7 @@ export function LobbyPage() {
 
       {!joinable && !mySlot && (
         <p className="form-hint">
-          Запись недоступна: Лобби находится в статусе выше.
+          Запись недоступна: лобби находится в статусе выше.
         </p>
       )}
 
@@ -401,23 +421,25 @@ export function LobbyPage() {
         <div className="lobby-card">
           <h3>Сплит аренды</h3>
           <p className="card-meta">
-            {formatMoney(lobby.rentTotal)} за зал, {formatSlots(lobby.slotCount, "nominative")}.
+            {formatMoney(lobby.rentTotal)} за зал,{" "}
+            {formatSlots(lobby.slotCount, "nominative")}.
           </p>
           <p style={{ margin: "var(--ms-space-2) 0 0" }}>
             <strong>{formatMoney(lobby.splitPerPlayer)}</strong> с человека
           </p>
           {lobby.depositEnabled && (
             <p className="form-hint">
-              При записи удерживается Залог. Отмена за два часа возвращает его.
+              При записи удерживается залог. Отмена за два часа возвращает его.
             </p>
           )}
           {holds.length > 0 && (
             <ul className="hold-list">
-              {holds.map((hold) => (
-                <li key={hold.slotId}>
-                  {HOLD_LABELS[hold.status] ?? hold.status}
+              {summarizeHolds(holds).map((group) => (
+                <li key={`${group.status}-${group.amount}`}>
+                  {HOLD_LABELS[group.status] ?? group.status}
                   {": "}
-                  {formatMoney(hold.amount)}
+                  {formatMoney(group.amount)}
+                  {group.count > 1 ? ` × ${group.count}` : ""}
                 </li>
               ))}
             </ul>
@@ -467,6 +489,26 @@ export function LobbyPage() {
         <Button variant="secondary" loading={busy} onClick={share}>
           Поделиться
         </Button>
+        {!isOrganizer &&
+          (mySlot || pendingRequest) &&
+          lobby.status !== "cancelled" &&
+          lobby.status !== "finished" && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (
+                  !openMaxChat({
+                    username: lobby.organizer.username,
+                    maxUserId: lobby.organizer.maxUserId,
+                  })
+                ) {
+                  showToast("Не удалось открыть чат с организатором", "error");
+                }
+              }}
+            >
+              Написать
+            </Button>
+          )}
         {!mySlot && !pendingRequest && freeSlots.length > 0 && joinable && (
           <Button variant="primary" loading={busy} onClick={join}>
             {lobby.joinMode === "approval" ? "Отправить заявку" : "Занять слот"}

@@ -9,11 +9,12 @@ const KEYS = {
 };
 
 function jsonFetch(payload: unknown) {
-  return vi.fn(async (_url: string) =>
-    new Response(JSON.stringify(payload), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    })
+  return vi.fn(
+    async (_url: string) =>
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
   );
 }
 
@@ -34,7 +35,7 @@ const SUGGEST_PAYLOAD = {
   ],
 };
 
-// Yandex answers "longitude latitude"; everything else here is lat/lng.
+// яндекс отдаёт «долгота широта»
 const GEOCODE_PAYLOAD = {
   response: {
     GeoObjectCollection: {

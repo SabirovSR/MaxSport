@@ -46,6 +46,8 @@ export interface Lobby {
     firstName: string;
     lastName: string | null;
     photoUrl?: string | null;
+    username?: string | null;
+    maxUserId?: number;
   };
   slots: Array<{
     id: string;
@@ -61,7 +63,6 @@ export interface Lobby {
   depositEnabled: boolean;
   cardMessageId: string | null;
   joinMode: "instant" | "approval";
-  /** Present only when the feed request carried the user's position. */
   distanceM?: number;
 }
 
@@ -70,6 +71,8 @@ export interface PublicPlayer {
   firstName: string;
   lastName: string | null;
   photoUrl: string | null;
+  username?: string | null;
+  maxUserId?: number;
 }
 
 export interface JoinRequest {
@@ -132,6 +135,7 @@ export interface Passport {
     gameLevel: string;
   };
   badges: Array<{ code: string; title: string; description: string }>;
+  kudos?: Array<{ tag: string; votes: number }>;
   attendancePct: number;
   sportSkills: SportSkill[];
 }
@@ -150,6 +154,8 @@ export interface RosterEntry {
   firstName: string;
   lastName: string | null;
   photoUrl: string | null;
+  username?: string | null;
+  maxUserId?: number;
   roleRequired: string | null;
   status: string;
 }
@@ -401,9 +407,7 @@ export const api = {
               if (!data) continue;
               try {
                 onMessage(JSON.parse(data) as Lobby);
-              } catch {
-                // Ignore a malformed frame and keep the live stream running.
-              }
+              } catch {}
             }
           }
         } catch (cause) {
@@ -426,6 +430,14 @@ export const api = {
     return apiFetch<{ lobby: Lobby }>(`/api/lobbies/${lobbyId}/finish`, {
       method: "POST",
     });
+  },
+  notifyLobbyPlayers(lobbyId: string) {
+    return apiFetch<{ sent: number }>(
+      `/api/lobbies/${lobbyId}/notify-players`,
+      {
+        method: "POST",
+      }
+    );
   },
   submitKarma(body: {
     targetId: string;
