@@ -24,6 +24,8 @@ declare global {
       openMaxLink?: (url: string) => void;
       ready?: () => void;
       close?: () => void;
+      onEvent?: (event: string, cb: () => void) => void;
+      offEvent?: (event: string, cb: () => void) => void;
       BackButton?: {
         show: () => void;
         hide: () => void;

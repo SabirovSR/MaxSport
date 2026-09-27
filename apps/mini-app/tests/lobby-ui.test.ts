@@ -13,6 +13,7 @@ import {
 } from "../src/lib/lobbyShare";
 import { contactShareText, maxProfileUrl } from "../src/lib/maxContact";
 import { markableStatuses } from "../src/lib/presenceActions";
+import { parentPath } from "../src/lib/useBackButton";
 import { sortLobbies } from "../src/lib/lobbySort";
 
 function lobby(
@@ -113,11 +114,10 @@ describe("lobby share links", () => {
       sport: "Волейбол",
       when: "ср, 19:00",
       venue: "ФОК",
-      link,
     });
-    expect(text).toContain(link);
-    expect(maxShareUrl(text)).toBe(
-      `https://max.ru/:share?text=${encodeURIComponent(text)}`
+    expect(text).not.toContain(link);
+    expect(maxShareUrl(`${text}\n${link}`)).toBe(
+      `https://max.ru/:share?text=${encodeURIComponent(`${text}\n${link}`)}`
     );
   });
 });
@@ -127,9 +127,19 @@ describe("max contact links", () => {
     expect(maxProfileUrl({ username: "@coach" })).toBe("https://max.ru/coach");
     expect(maxProfileUrl({ maxUserId: 42 })).toBeNull();
     expect(maxProfileUrl({ username: "  ", maxUserId: 42 })).toBeNull();
-    expect(contactShareText("https://max.ru/bot?startapp=lobby_1")).toContain(
-      "lobby_1"
-    );
+    expect(contactShareText()).toBe("Привет! Пишу по игре в MAX Sport.");
+  });
+});
+
+describe("back navigation", () => {
+  it("returns to the parent screen instead of an empty history", () => {
+    expect(parentPath("/")).toBeNull();
+    expect(parentPath("/create")).toBeNull();
+    expect(parentPath("/passport")).toBeNull();
+    expect(parentPath("/lobby/abc/roster")).toBe("/lobby/abc");
+    expect(parentPath("/lobby/abc/edit")).toBe("/lobby/abc");
+    expect(parentPath("/lobby/abc")).toBe("/");
+    expect(parentPath("/passport/user-1")).toBe("/passport");
   });
 });
 

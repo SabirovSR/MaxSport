@@ -206,7 +206,7 @@ export function LobbyPage() {
         // без конфига всё равно соберём ссылку
       }
       const link = lobbyDeepLink(botUsername, id);
-      const text = contactShareText(link);
+      const text = contactShareText();
       void api.contactLobby(id).catch(() => undefined);
       openMaxChat({ username: lobby.organizer.username });
       const shared = await shareContactMessage(text, link);
@@ -253,7 +253,6 @@ export function LobbyPage() {
         sport: SPORT_LABELS[lobby.sport] ?? lobby.sport,
         when: formatStartAt(lobby.startAt),
         venue: lobby.venue.name,
-        link,
       });
       const mode = await openLobbyShare({ mid, text, link });
       showToast(

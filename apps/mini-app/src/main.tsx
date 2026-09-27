@@ -19,6 +19,8 @@ function resolveScheme(): "light" | "dark" {
     : "dark";
 }
 
+window.WebApp?.ready?.();
+
 const scheme = resolveScheme();
 document.documentElement.dataset.msTheme = scheme;
 
