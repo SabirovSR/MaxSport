@@ -4,7 +4,7 @@ import {
   ValidationError,
   type ScheduledJobKind,
 } from "@maxsport/shared";
-import type { MaxApiClient } from "@maxsport/max-channel";
+import { maxUserProfileUrl, type MaxApiClient } from "@maxsport/max-channel";
 import type { Pool } from "@maxsport/shared";
 
 export interface NotificationScheduler {
@@ -351,34 +351,63 @@ export function createNotificationScheduler(
       }
 
       const [from, to] = await Promise.all([
-        pool.query(`SELECT first_name, last_name FROM users WHERE id = $1`, [
-          fromUserId,
-        ]),
+        pool.query(
+          `SELECT first_name, last_name, max_user_id FROM users WHERE id = $1`,
+          [fromUserId]
+        ),
         pool.query(`SELECT max_user_id FROM users WHERE id = $1`, [targetId]),
       ]);
-      const maxUserId = Number(to.rows[0]?.max_user_id);
-      if (!maxUserId) {
+      const targetMaxUserId = Number(to.rows[0]?.max_user_id);
+      if (!targetMaxUserId) {
         throw new ValidationError(
           "Нет аккаунта MAX, чтобы доставить сообщение"
         );
       }
+      const fromMaxUserId = Number(from.rows[0]?.max_user_id);
       const name = [from.rows[0]?.first_name, from.rows[0]?.last_name]
         .filter(Boolean)
         .join(" ");
+      const who = name || "Игрок";
+      const profileUrl = fromMaxUserId
+        ? maxUserProfileUrl(fromMaxUserId)
+        : null;
       const botUsername = process.env.BOT_USERNAME ?? "gov_max_sport_bot";
+      const buttons: Array<
+        Array<{ type: "link" | "open_app"; text: string; url: string }>
+      > = [];
+      if (profileUrl) {
+        buttons.push([
+          {
+            type: "link",
+            text: "Написать игроку",
+            url: profileUrl,
+          },
+        ]);
+      }
+      buttons.push([
+        {
+          type: "open_app",
+          text: "Открыть лобби",
+          url: `https://max.ru/${botUsername}?startapp=lobby_${lobbyId}`,
+        },
+      ]);
       await deliver(maxApi, {
-        userId: maxUserId,
-        text: `${name || "Игрок"} хочет написать вам в MAX Sport. Откройте лобби.`,
-        buttons: [
-          [
-            {
-              type: "open_app",
-              text: "Открыть лобби",
-              url: `https://max.ru/${botUsername}?startapp=lobby_${lobbyId}`,
-            },
-          ],
-        ],
+        userId: targetMaxUserId,
+        text: profileUrl
+          ? `${who} хочет задать вопрос по вашему лобби. Нажмите, чтобы начать диалог:\n${profileUrl}`
+          : `${who} хочет задать вопрос по вашему лобби в MAX Sport.`,
+        buttons,
       });
+      if (fromMaxUserId && toIsOrganizer && fromMaxUserId !== targetMaxUserId) {
+        try {
+          await maxApi.sendMessage({
+            userId: fromMaxUserId,
+            text: "Организатор уведомлен и скоро с вами свяжется.",
+          });
+        } catch {
+          // тост в мини-приложении всё равно покажем
+        }
+      }
     },
   };
 }

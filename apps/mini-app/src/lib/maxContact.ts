@@ -3,8 +3,10 @@ export interface MaxContact {
   maxUserId?: number | null;
 }
 
-// публичный аккаунт в max — чат без записной книжки. /id не открывается
 export function maxProfileUrl(contact: MaxContact): string | null {
+  if (contact.maxUserId && Number.isFinite(contact.maxUserId)) {
+    return `https://max.ru/u/${contact.maxUserId}`;
+  }
   const username = contact.username?.replace(/^@/, "").trim();
   if (!username) return null;
   return `https://max.ru/${encodeURIComponent(username)}`;

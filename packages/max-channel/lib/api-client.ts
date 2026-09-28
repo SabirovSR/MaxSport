@@ -125,6 +125,22 @@ export function createMaxApiClient(token: string): MaxApiClient {
     },
 
     async subscribeWebhook(url, secret) {
+      const listed = await maxFetch(token, "/subscriptions", {
+        method: "GET",
+      });
+      if (listed.ok) {
+        const data = (await listed.json()) as {
+          subscriptions?: Array<{ url?: string }>;
+        };
+        for (const sub of data.subscriptions ?? []) {
+          if (!sub.url || sub.url === url) continue;
+          await maxFetch(token, "/subscriptions", {
+            method: "DELETE",
+            searchParams: { url: sub.url },
+          });
+        }
+      }
+
       const response = await maxFetch(token, "/subscriptions", {
         method: "POST",
         body: JSON.stringify({

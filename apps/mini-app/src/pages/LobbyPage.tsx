@@ -194,18 +194,24 @@ export function LobbyPage() {
     }
   }
 
-  function writeToOrganizer() {
+  async function writeToOrganizer() {
     if (!id || !lobby) return;
-    const opened = openMaxChat({
+    openMaxChat({
       username: lobby.organizer.username,
       maxUserId: lobby.organizer.maxUserId,
     });
-    void api.contactLobby(id).catch(() => undefined);
-    if (!opened) {
-      showToast(
-        "У организатора нет публичного ника в MAX. Мы отправили ему уведомление",
-        "info"
-      );
+    setBusy(true);
+    try {
+      await api.contactLobby(id);
+      showToast("Организатор уведомлен и скоро с вами свяжется");
+    } catch (cause) {
+      const message =
+        cause instanceof Error
+          ? cause.message
+          : "Не удалось написать организатору";
+      showToast(message, "error");
+    } finally {
+      setBusy(false);
     }
   }
 

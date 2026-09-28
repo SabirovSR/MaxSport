@@ -117,18 +117,22 @@ export function RosterPage() {
     }
   }
 
-  function writeToPlayer(entry: RosterEntry) {
+  async function writeToPlayer(entry: RosterEntry) {
     if (!id) return;
-    const opened = openMaxChat({
+    openMaxChat({
       username: entry.username,
       maxUserId: entry.maxUserId,
     });
-    void api.contactLobby(id, entry.userId).catch(() => undefined);
-    if (!opened) {
-      showToast(
-        "У игрока нет публичного ника в MAX. Мы отправили ему уведомление",
-        "info"
-      );
+    setBusy(true);
+    try {
+      await api.contactLobby(id, entry.userId);
+      showToast("Игрок уведомлён и скоро свяжется");
+    } catch (cause) {
+      const message =
+        cause instanceof Error ? cause.message : "Не удалось открыть чат";
+      showToast(message, "error");
+    } finally {
+      setBusy(false);
     }
   }
 
