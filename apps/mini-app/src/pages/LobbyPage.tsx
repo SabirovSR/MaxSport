@@ -31,11 +31,7 @@ import {
   lobbyShareText,
   openLobbyShare,
 } from "../lib/lobbyShare";
-import {
-  contactShareText,
-  openMaxChat,
-  shareContactMessage,
-} from "../lib/maxContact";
+import { openMaxChat } from "../lib/maxContact";
 
 const HOLD_LABELS: Record<string, string> = {
   hold_pending: "Ожидает залог",
@@ -198,35 +194,18 @@ export function LobbyPage() {
     }
   }
 
-  async function writeToOrganizer() {
+  function writeToOrganizer() {
     if (!id || !lobby) return;
-    setBusy(true);
-    try {
-      let botUsername = "gov_max_sport_bot";
-      try {
-        const config = await api.getConfig();
-        if (config.botUsername) botUsername = config.botUsername;
-      } catch {
-        // без конфига всё равно соберём ссылку
-      }
-      const link = lobbyDeepLink(botUsername, id);
-      const text = contactShareText();
-      void api.contactLobby(id).catch(() => undefined);
-      openMaxChat({ username: lobby.organizer.username });
-      const shared = await shareContactMessage(text, link);
+    const opened = openMaxChat({
+      username: lobby.organizer.username,
+      maxUserId: lobby.organizer.maxUserId,
+    });
+    void api.contactLobby(id).catch(() => undefined);
+    if (!opened) {
       showToast(
-        shared
-          ? "Выберите чат с организатором"
-          : "Текст скопирован — отправьте его организатору"
+        "У организатора нет публичного ника в MAX. Мы отправили ему уведомление",
+        "info"
       );
-    } catch (cause) {
-      const message =
-        cause instanceof Error
-          ? cause.message
-          : "Не удалось написать организатору";
-      showToast(message, "error");
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -594,9 +573,7 @@ export function LobbyPage() {
             <Button
               variant="secondary"
               loading={busy}
-              onClick={() => {
-                void writeToOrganizer();
-              }}
+              onClick={writeToOrganizer}
             >
               Написать
             </Button>

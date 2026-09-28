@@ -7,12 +7,7 @@ import { PlayerChip } from "../components/PlayerChip";
 import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
 import { useToast } from "../components/Toast";
 import { useMe } from "../lib/useMe";
-import {
-  contactShareText,
-  openMaxChat,
-  shareContactMessage,
-} from "../lib/maxContact";
-import { lobbyDeepLink } from "../lib/lobbyShare";
+import { openMaxChat } from "../lib/maxContact";
 import { markableStatuses } from "../lib/presenceActions";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -122,33 +117,18 @@ export function RosterPage() {
     }
   }
 
-  async function writeToPlayer(entry: RosterEntry) {
+  function writeToPlayer(entry: RosterEntry) {
     if (!id) return;
-    setBusy(true);
-    try {
-      let botUsername = "gov_max_sport_bot";
-      try {
-        const config = await api.getConfig();
-        if (config.botUsername) botUsername = config.botUsername;
-      } catch {
-        // без конфига всё равно соберём ссылку
-      }
-      const link = lobbyDeepLink(botUsername, id);
-      const text = contactShareText();
-      void api.contactLobby(id, entry.userId).catch(() => undefined);
-      openMaxChat({ username: entry.username });
-      const shared = await shareContactMessage(text, link);
+    const opened = openMaxChat({
+      username: entry.username,
+      maxUserId: entry.maxUserId,
+    });
+    void api.contactLobby(id, entry.userId).catch(() => undefined);
+    if (!opened) {
       showToast(
-        shared
-          ? "Выберите чат с игроком"
-          : "Текст скопирован — отправьте его игроку"
+        "У игрока нет публичного ника в MAX. Мы отправили ему уведомление",
+        "info"
       );
-    } catch (cause) {
-      const message =
-        cause instanceof Error ? cause.message : "Не удалось открыть чат";
-      showToast(message, "error");
-    } finally {
-      setBusy(false);
     }
   }
 

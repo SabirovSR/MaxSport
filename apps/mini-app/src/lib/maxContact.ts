@@ -1,10 +1,9 @@
-import { copyText, maxShareUrl } from "./lobbyShare";
-
 export interface MaxContact {
   username?: string | null;
   maxUserId?: number | null;
 }
 
+// публичный аккаунт в max — чат без записной книжки. /id не открывается
 export function maxProfileUrl(contact: MaxContact): string | null {
   const username = contact.username?.replace(/^@/, "").trim();
   if (!username) return null;
@@ -22,29 +21,4 @@ export function openMaxChat(contact: MaxContact): boolean {
     window.open(url, "_blank", "noopener,noreferrer");
   }
   return true;
-}
-
-export function contactShareText(): string {
-  return "Привет! Пишу по игре в MAX Sport.";
-}
-
-export async function shareContactMessage(
-  text: string,
-  link: string
-): Promise<boolean> {
-  await copyText(`${text}\n${link}`);
-  if (window.WebApp?.shareMaxContent) {
-    window.WebApp.shareMaxContent({ text, link });
-    return true;
-  }
-  const url = maxShareUrl(`${text}\n${link}`);
-  if (window.WebApp?.openMaxLink) {
-    window.WebApp.openMaxLink(url);
-    return true;
-  }
-  if (window.WebApp?.openLink) {
-    window.WebApp.openLink(url);
-    return true;
-  }
-  return false;
 }
