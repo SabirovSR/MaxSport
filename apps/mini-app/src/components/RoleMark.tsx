@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { roleMarkKind, type RoleMarkKind } from "../lib/roleVisual";
 
 function Person() {
@@ -104,8 +105,22 @@ function Accessory({ kind }: { kind: RoleMarkKind }) {
     case "goalie":
       return (
         <g>
-          <rect x="13.1" y="11.5" width="2.85" height="3.8" rx="0.9" />
-          <rect x="16.7" y="11.5" width="2.85" height="3.8" rx="0.9" />
+          <rect
+            x="2.8"
+            y="13.4"
+            width="3.7"
+            height="5.4"
+            rx="1.6"
+            transform="rotate(30 6.5 13.8)"
+          />
+          <rect
+            x="17.5"
+            y="13.4"
+            width="3.7"
+            height="5.4"
+            rx="1.6"
+            transform="rotate(-30 17.5 13.8)"
+          />
         </g>
       );
     case "defender":
@@ -118,6 +133,16 @@ function Accessory({ kind }: { kind: RoleMarkKind }) {
     default:
       return null;
   }
+}
+
+function Outlined({ children }: { children: ReactNode }) {
+  if (!children) return null;
+  return (
+    <>
+      <g className="role-mark-edge">{children}</g>
+      <g className="role-mark-body">{children}</g>
+    </>
+  );
 }
 
 export function RoleMark({
@@ -136,8 +161,12 @@ export function RoleMark({
       role={title ? "img" : undefined}
     >
       {title ? <title>{title}</title> : null}
-      <Person />
-      <Accessory kind={kind} />
+      <Outlined>
+        <Person />
+      </Outlined>
+      <Outlined>
+        <Accessory kind={kind} />
+      </Outlined>
     </svg>
   );
 }

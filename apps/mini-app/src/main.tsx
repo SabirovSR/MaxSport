@@ -2,7 +2,9 @@ import { createRoot } from "react-dom/client";
 import { MaxUI } from "@maxhub/max-ui";
 import "@maxhub/max-ui/dist/styles.css";
 import { BrowserRouter } from "react-router-dom";
+import { SWRConfig } from "swr";
 import { App } from "./App";
+import { swrCacheProvider } from "./lib/swrCache";
 import "./styles.css";
 
 function resolvePlatform(): "ios" | "android" {
@@ -26,8 +28,16 @@ document.documentElement.dataset.msTheme = scheme;
 
 createRoot(document.getElementById("root")!).render(
   <MaxUI platform={resolvePlatform()} colorScheme={scheme}>
-    <BrowserRouter basename="/app">
-      <App />
-    </BrowserRouter>
+    <SWRConfig
+      value={{
+        provider: swrCacheProvider,
+        revalidateOnFocus: true,
+        shouldRetryOnError: true,
+      }}
+    >
+      <BrowserRouter basename="/app">
+        <App />
+      </BrowserRouter>
+    </SWRConfig>
   </MaxUI>
 );

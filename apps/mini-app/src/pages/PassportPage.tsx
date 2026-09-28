@@ -14,6 +14,7 @@ import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
 import { useToast } from "../components/Toast";
 import { useGeolocation } from "../lib/useGeolocation";
 import { formatStartAt, initialsOf } from "../lib/format";
+import { requestOnboarding } from "../lib/onboarding";
 import { refreshMe } from "../lib/useMe";
 
 // окно явки: −20 мин / +15 мин
@@ -23,6 +24,16 @@ const WINDOW_CLOSES_MS = 15 * 60 * 1000;
 function presenceWindow(startAt: string) {
   const delta = Date.now() - new Date(startAt).getTime();
   return delta >= WINDOW_OPENS_MS && delta <= WINDOW_CLOSES_MS;
+}
+
+function HowItWorksButton() {
+  return (
+    <div style={{ margin: "var(--ms-space-4) 0" }}>
+      <Button variant="secondary" stretched onClick={requestOnboarding}>
+        Как это работает
+      </Button>
+    </div>
+  );
 }
 
 export function PassportPage() {
@@ -144,7 +155,14 @@ export function PassportPage() {
     }
   }
 
-  if (error && !passport) return <ErrorState message={error} onRetry={load} />;
+  if (error && !passport) {
+    return (
+      <>
+        <ErrorState message={error} onRetry={load} />
+        {isOwn && <HowItWorksButton />}
+      </>
+    );
+  }
   if (!passport) return <LineSkeleton count={5} />;
 
   const name = [passport.user.firstName, passport.user.lastName]
@@ -201,6 +219,8 @@ export function PassportPage() {
           <small>Явка</small>
         </div>
       </div>
+
+      {isOwn && <HowItWorksButton />}
 
       <h3 className="section-title">Навыки по видам спорта</h3>
       {passport.sportSkills.length === 0 ? (

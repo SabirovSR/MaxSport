@@ -22,37 +22,43 @@ npm run dev:app
 
 ```bash
 npm run migrate
-# в Docker: сервис migrate в docker-compose.yml
 ```
 
 Demo seed для питча (после первого входа в Mini App):
 
 ```bash
 npm run seed:demo
-# на сервере: docker compose run --rm api node apps/api/dist/seed-demo.js
 ```
 
 Проверки:
 
 ```bash
 npm run check      # typecheck + boundaries + tests
-npm run build      # api + mini-app
+npm run build      # api + mini-app + landing
 ```
 
 ## Структура
 
-- `apps/api` — Fastify: webhook, REST, scheduler, healthz
-- `apps/mini-app` — React + MAX UI (`/app`)
-- `packages/*` — доменные deep modules ([packages/README.md](packages/README.md))
-- `deploy/` — Docker, Caddy, миграции
+```
+apps/
+  api/            Fastify: webhook, REST, scheduler, healthz
+    src/http/     JSON Schema, ошибки 400, rate limit
+  mini-app/       React + MAX UI (`/app`)
+  landing/        публичный лендинг
+packages/         доменные модули (lobby, presence, karma, …)
+deploy/           Docker, Caddy, миграции
+docs/             продукт, стек, инфраструктура, ADR
+```
 
 ## Документация
 
-- Язык домена: [CONTEXT.md](CONTEXT.md)
-- Продукт: [docs/PRODUCT.md](docs/PRODUCT.md)
-- Стек: [docs/STACK.md](docs/STACK.md)
-- Прод: [docs/ops/PRODUCTION.md](docs/ops/PRODUCTION.md)
-- Демо-сценарий питча: [docs/DEMO.md](docs/DEMO.md)
+- Описание приложения: [docs/PRODUCT.md](docs/PRODUCT.md)
+- Язык домена: [docs/DOMAIN.md](docs/DOMAIN.md)
+- Стек и слои: [docs/STACK.md](docs/STACK.md)
+- Инфраструктура: [docs/INFRA.md](docs/INFRA.md)
+- Пакеты (deep modules): [packages/README.md](packages/README.md)
+- Запуск и прод: [docs/ops/SETUP.md](docs/ops/SETUP.md), [docs/ops/PRODUCTION.md](docs/ops/PRODUCTION.md)
+- Демо-сценарий: [docs/DEMO.md](docs/DEMO.md)
 
 ## Деплой
 

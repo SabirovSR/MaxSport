@@ -26,7 +26,3 @@ Avoid barrel files that re-export entire subtrees. Prefer several small entry po
 ```bash
 npm run lint:boundaries
 ```
-
-## Copy-me template
-
-See `packages/example/` for a minimal deep module.

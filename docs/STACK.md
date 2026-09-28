@@ -1,17 +1,17 @@
 # Стек MAX Sport
 
-Пока только решение на бумаге. Код не пишем, пока не закроем продуктовую документацию.
+TypeScript end-to-end: Mini App (React + MAX UI), бот MAX и бизнес-API в одном Fastify-процессе.
 
 ## Что официально даёт MAX
 
 Источник: [Подготовка к разработке бота](https://dev.max.ru/docs/chatbots/bots-coding/prepare).
 
-| Что | Официально | Пакет / ссылка |
-| --- | --- | --- |
-| Бот, TypeScript / JavaScript | Да | [`@maxhub/max-bot-api`](https://dev.max.ru/docs/chatbots/bots-coding/js) |
-| Бот, Golang | Да | [`max-bot-api-client-go`](https://dev.max.ru/docs/chatbots/bots-coding/go) |
-| Mini App | Да | HTML/JS/CSS + [MAX Bridge](https://dev.max.ru/docs/webapps/bridge) + [MAX UI (React)](https://dev.max.ru/docs/webapps/introduction) |
-| Бот, Python | Нет | REST `platform-api2.max.ru` вручную или сторонние обёртки |
+| Что                          | Официально | Пакет / ссылка                                                                                                                      |
+| ---------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Бот, TypeScript / JavaScript | Да         | [`@maxhub/max-bot-api`](https://dev.max.ru/docs/chatbots/bots-coding/js)                                                            |
+| Бот, Golang                  | Да         | [`max-bot-api-client-go`](https://dev.max.ru/docs/chatbots/bots-coding/go)                                                          |
+| Mini App                     | Да         | HTML/JS/CSS + [MAX Bridge](https://dev.max.ru/docs/webapps/bridge) + [MAX UI (React)](https://dev.max.ru/docs/webapps/introduction) |
+| Бот, Python                  | Нет        | REST `platform-api2.max.ru` вручную или сторонние обёртки                                                                           |
 
 Официальной Python-библиотеки у MAX нет. Community-пакеты вроде `maxapi` существуют, но это не документация платформы: жюри смотрит на JS/Go, а обёртка может отстать от API.
 
@@ -69,11 +69,14 @@ MAX не даёт держать Webhook и Long Polling одновременн�
 
 Почему не остальные:
 
-| Вариант | Почему нет |
-| --- | --- |
-| NestJS | Слишком много каркаса на 2 недели |
-| Express | Нет схемы и нормальных типов из коробки |
-| Hono | Силён на edge; мы на VPS с Postgres/Redis |
+| Вариант | Почему нет                                |
+| ------- | ----------------------------------------- |
+| NestJS  | Слишком много каркаса на 2 недели         |
+| Express | Нет схемы и нормальных типов из коробки   |
+| Hono    | Силён на edge; мы на VPS с Postgres/Redis |
 
 `bot.start()` SDK не используем — это Long Polling. Fastify принимает `POST /webhook` и отдаёт Update в `@maxhub/max-bot-api`.
 
+REST Mini App валидируется JSON Schema (TypeBox): невалидный JSON и лишние поля дают `400`, а не `500`. Частота запросов ограничена `@fastify/rate-limit` на Redis: общий потолок и более жёсткий лимит на создание Лобби и голоса Кармы.
+
+Mini App кэширует ответы (SWR, stale-while-revalidate) и статику (Service Worker). При потере сети лента остаётся на экране, ошибка уходит тостом.

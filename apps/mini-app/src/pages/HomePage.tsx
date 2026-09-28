@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@maxhub/max-ui";
 import {
@@ -8,7 +8,6 @@ import {
   SPORT_LABELS,
   type Lobby,
   type MyLobby,
-  type Venue,
 } from "../api";
 import { VenueMap, type MapPoint } from "../components/VenueMap";
 import { Chips } from "../components/Chips";
@@ -19,7 +18,7 @@ import { LobbyStatusBadge } from "../components/LobbyStatusBadge";
 import { CardSkeleton, EmptyState, ErrorState } from "../components/States";
 import { useGeolocation } from "../lib/useGeolocation";
 import { useMe } from "../lib/useMe";
-import { useRefreshOnFocus } from "../lib/useRefreshOnFocus";
+import { useRemote } from "../lib/useRemote";
 import { sortLobbies, type LobbySortMode as SortMode } from "../lib/lobbySort";
 import {
   formatDistance,
@@ -93,8 +92,6 @@ export function HomePage() {
   const { me } = useMe();
   const [scope, setScope] = useState<"all" | "mine">("all");
   const [view, setView] = useState<"feed" | "map">("feed");
-  const [lobbies, setLobbies] = useState<Lobby[]>([]);
-  const [venues, setVenues] = useState<Venue[]>([]);
   const [sport, setSport] = useState<string | null>(null);
   const [gameLevel, setGameLevel] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("time");
@@ -102,52 +99,55 @@ export function HomePage() {
   const [nearbyOnly, setNearbyOnly] = useState(false);
   const [mySportsOnly, setMySportsOnly] = useState(false);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [mySports, setMySports] = useState(readMySports);
 
   const geo = useGeolocation();
   const position = geo.position;
-
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      scope === "mine"
-        ? api.listMyLobbies()
-        : api.listLobbies({
-            sport: sport ?? undefined,
-            gameLevel: gameLevel ?? undefined,
-            hotOnly,
-            nearbyOnly,
-            lat: position?.lat,
-            lng: position?.lng,
-          }),
-      api.listVenuesMap(),
-    ])
-      .then(([lobbyData, venueData]) => {
-        setLobbies(lobbyData.lobbies);
-        setVenues(venueData.venues);
-      })
-      .catch((cause: Error) => setError(cause.message))
-      .finally(() => setLoading(false));
-  }, [
-    scope,
-    sport,
-    gameLevel,
-    hotOnly,
-    nearbyOnly,
-    position?.lat,
-    position?.lng,
-  ]);
-
-  useEffect(load, [load]);
-  useRefreshOnFocus(load);
+  const lobbyKey =
+    scope === "mine"
+      ? "my-lobbies"
+      : [
+          "lobbies",
+          sport,
+          gameLevel,
+          hotOnly,
+          nearbyOnly,
+          position?.lat,
+          position?.lng,
+        ].join(":");
+  const {
+    data: lobbyPayload,
+    error: lobbyError,
+    isLoading,
+    isValidating,
+    mutate,
+  } = useRemote(lobbyKey, () =>
+    scope === "mine"
+      ? api.listMyLobbies()
+      : api.listLobbies({
+          sport: sport ?? undefined,
+          gameLevel: gameLevel ?? undefined,
+          hotOnly,
+          nearbyOnly,
+          lat: position?.lat,
+          lng: position?.lng,
+        })
+  );
+  const { data: venuePayload } = useRemote("venues-map", api.listVenuesMap);
+  const lobbies = lobbyPayload?.lobbies ?? [];
+  const venues = venuePayload?.venues ?? [];
+  const loading = isLoading && !lobbyPayload;
+  const error =
+    lobbyError && !lobbyPayload
+      ? lobbyError instanceof Error
+        ? lobbyError.message
+        : String(lobbyError)
+      : null;
 
   useEffect(() => {
     if (me) setMySports(me.sportSkills.map((skill) => skill.sport));
-  }, [me?.sportSkills]);
+  }, [me]);
 
   const toggleNearby = async () => {
     if (nearbyOnly) {
@@ -366,17 +366,20 @@ export function HomePage() {
         <button
           type="button"
           className="feed-refresh"
-          disabled={loading}
-          onClick={load}
+          disabled={isValidating}
+          onClick={() => void mutate()}
         >
-          <span aria-hidden="true" className={loading ? "is-spinning" : ""}>
+          <span
+            aria-hidden="true"
+            className={isValidating ? "is-spinning" : ""}
+          >
             ↻
           </span>
-          {loading ? "Обновляем…" : "Обновить ленту"}
+          {isValidating ? "Обновляем…" : "Обновить ленту"}
         </button>
       )}
 
-      {error && <ErrorState message={error} onRetry={load} />}
+      {error && <ErrorState message={error} onRetry={() => void mutate()} />}
 
       {!error && loading && <CardSkeleton />}
 

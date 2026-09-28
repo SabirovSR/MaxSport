@@ -20,6 +20,8 @@ import {
   registerWebhookRoutes,
   registerWebhookSubscription,
 } from "./webhook.js";
+import { httpErrorHandler } from "./http/errors.js";
+import { registerRateLimit } from "./http/rate-limit.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -84,6 +86,8 @@ async function main() {
   await app.register(cors, {
     origin: [publicOrigin, "http://localhost:5173", "http://localhost:3000"],
   });
+  await registerRateLimit(app, redisUrl);
+  app.setErrorHandler(httpErrorHandler);
 
   const miniAppRoot = join(__dirname, "../../mini-app/dist");
   await app.register(fastifyStatic, {
