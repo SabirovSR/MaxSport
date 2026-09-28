@@ -103,6 +103,17 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
     }
   });
 
+  app.get("/api/me/inbox", async (request, reply) => {
+    try {
+      const user = await requireAuth(request, deps.pool, deps.botToken);
+      const notices = await deps.lobbies.listOrganizerInbox(user.id);
+      return reply.send({ notices });
+    } catch (error) {
+      const mapped = handleError(error);
+      return reply.status(mapped.statusCode).send(mapped.body);
+    }
+  });
+
   app.get("/api/lobbies/:id", async (request, reply) => {
     try {
       await requireAuth(request, deps.pool, deps.botToken);
@@ -402,19 +413,6 @@ export async function registerApiRoutes(app: FastifyInstance, deps: ApiDeps) {
       await deps.chatCard.syncCard(id);
       await deps.realtime.publishLobbyUpdate(id, lobby);
       return reply.send({ lobby });
-    } catch (error) {
-      const mapped = handleError(error);
-      return reply.status(mapped.statusCode).send(mapped.body);
-    }
-  });
-
-  app.post("/api/lobbies/:id/contact", async (request, reply) => {
-    try {
-      const user = await requireAuth(request, deps.pool, deps.botToken);
-      const { id } = request.params as { id: string };
-      const body = request.body as { userId?: string } | undefined;
-      await deps.notifications.notifyContact(id, user.id, body?.userId);
-      return reply.send({ ok: true });
     } catch (error) {
       const mapped = handleError(error);
       return reply.status(mapped.statusCode).send(mapped.body);

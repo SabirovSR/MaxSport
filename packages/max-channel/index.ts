@@ -1,7 +1,6 @@
 export { validateInitData } from "./lib/init-data.js";
 export { createMaxApiClient } from "./lib/api-client.js";
 export { createMaxBotAdapter } from "./lib/bot-adapter.js";
-export { maxUserProfileUrl } from "./lib/profile-url.js";
 export type {
   MaxApiClient,
   SendMessageInput,

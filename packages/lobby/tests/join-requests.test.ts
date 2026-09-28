@@ -98,6 +98,44 @@ describe("join requests", () => {
     expect(request.roleRequired).toBe("Либеро");
   });
 
+  it("lists pending join requests for the organizer inbox", async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes("v.name AS venue_name")) {
+        return {
+          rows: [
+            {
+              id: "request-1",
+              lobby_id: "lobby-1",
+              slot_id: "slot-2",
+              user_id: "player-1",
+              status: "pending",
+              first_name: "Иван",
+              last_name: null,
+              photo_url: null,
+              role_required: "Либеро",
+              created_at: "2026-09-22T12:00:00.000Z",
+              resolved_at: null,
+              sport: "volleyball",
+              start_at: "2026-09-24T16:00:00.000Z",
+              venue_name: "ФОК",
+            },
+          ],
+        };
+      }
+      throw new Error(`Unexpected query: ${sql}`);
+    });
+    const service = createLobbyService(
+      { query } as unknown as Pool,
+      {} as VenueRepository
+    );
+
+    const notices = await service.listOrganizerInbox("organizer-1");
+    expect(notices).toHaveLength(1);
+    expect(notices[0]?.player.firstName).toBe("Иван");
+    expect(notices[0]?.venueName).toBe("ФОК");
+    expect(notices[0]?.sport).toBe("volleyball");
+  });
+
   it("turns a stale concurrent accept into SLOT_TAKEN", async () => {
     const query = vi.fn(async (sql: string) => {
       if (sql === "BEGIN" || sql === "ROLLBACK") return { rows: [] };

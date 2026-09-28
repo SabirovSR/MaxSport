@@ -7,7 +7,6 @@ import { PlayerChip } from "../components/PlayerChip";
 import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
 import { useToast } from "../components/Toast";
 import { useMe } from "../lib/useMe";
-import { openMaxChat } from "../lib/maxContact";
 import { markableStatuses } from "../lib/presenceActions";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -111,25 +110,6 @@ export function RosterPage() {
       const message =
         cause instanceof Error ? cause.message : "Не удалось написать всем";
       setError(message);
-      showToast(message, "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function writeToPlayer(entry: RosterEntry) {
-    if (!id) return;
-    openMaxChat({
-      username: entry.username,
-      maxUserId: entry.maxUserId,
-    });
-    setBusy(true);
-    try {
-      await api.contactLobby(id, entry.userId);
-      showToast("Игрок уведомлён и скоро свяжется");
-    } catch (cause) {
-      const message =
-        cause instanceof Error ? cause.message : "Не удалось открыть чат";
       showToast(message, "error");
     } finally {
       setBusy(false);
@@ -326,15 +306,6 @@ export function RosterPage() {
                 {STATUS_LABELS[status]}
               </button>
             ))}
-            {entry.userId !== userId && (
-              <button
-                type="button"
-                className="chip"
-                onClick={() => writeToPlayer(entry)}
-              >
-                Написать
-              </button>
-            )}
             {entry.userId !== userId &&
               lobby &&
               ["open", "full", "gathering"].includes(lobby.status) && (

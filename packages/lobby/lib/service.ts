@@ -2,6 +2,7 @@ import type {
   GameLevel,
   JoinMode,
   JoinRequest,
+  InboxJoinRequest,
   Lobby,
   LobbyStatus,
   LobbyWithDetails,
@@ -97,6 +98,7 @@ export interface LobbyService {
     lobbyId: string,
     organizerId: string
   ): Promise<JoinRequest[]>;
+  listOrganizerInbox(organizerId: string): Promise<InboxJoinRequest[]>;
   acceptJoinRequest(
     lobbyId: string,
     requestId: string,
@@ -178,6 +180,15 @@ function mapSlot(row: Record<string, unknown>): Slot {
             : undefined,
         }
       : null,
+  };
+}
+
+function mapInboxJoinRequest(row: Record<string, unknown>): InboxJoinRequest {
+  return {
+    ...mapJoinRequest(row),
+    sport: row.sport as Sport,
+    startAt: new Date(row.start_at as string),
+    venueName: row.venue_name as string,
   };
 }
 
@@ -797,6 +808,24 @@ export function createLobbyService(
         [lobbyId]
       );
       return result.rows.map(mapJoinRequest);
+    },
+
+    async listOrganizerInbox(organizerId) {
+      const result = await pool.query(
+        `SELECT r.*, u.first_name, u.last_name, u.photo_url, s.role_required,
+                l.sport, l.start_at, v.name AS venue_name
+         FROM slot_join_requests r
+         JOIN lobbies l ON l.id = r.lobby_id
+         JOIN venues v ON v.id = l.venue_id
+         JOIN users u ON u.id = r.user_id
+         JOIN slots s ON s.id = r.slot_id
+         WHERE l.organizer_id = $1
+           AND r.status = 'pending'
+           AND l.status NOT IN ('finished', 'cancelled')
+         ORDER BY r.created_at DESC`,
+        [organizerId]
+      );
+      return result.rows.map(mapInboxJoinRequest);
     },
 
     async acceptJoinRequest(lobbyId, requestId, organizerId) {

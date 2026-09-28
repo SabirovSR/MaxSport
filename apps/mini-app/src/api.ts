@@ -87,6 +87,12 @@ export interface JoinRequest {
   resolvedAt: string | null;
 }
 
+export interface InboxJoinRequest extends JoinRequest {
+  sport: string;
+  startAt: string;
+  venueName: string;
+}
+
 export interface MyLobby extends Lobby {
   myRole: "organizer" | "player";
   mySlotId: string;
@@ -186,6 +192,9 @@ export const api = {
   },
   listMyLobbies() {
     return apiFetch<{ lobbies: MyLobby[] }>("/api/me/lobbies");
+  },
+  listInbox() {
+    return apiFetch<{ notices: InboxJoinRequest[] }>("/api/me/inbox");
   },
   suggestPlaces(text: string, near?: { lat: number; lng: number }) {
     const search = new URLSearchParams({ text });
@@ -444,12 +453,6 @@ export const api = {
         method: "POST",
       }
     );
-  },
-  contactLobby(lobbyId: string, userId?: string) {
-    return apiFetch<{ ok: boolean }>(`/api/lobbies/${lobbyId}/contact`, {
-      method: "POST",
-      body: JSON.stringify(userId ? { userId } : {}),
-    });
   },
   submitKarma(body: {
     targetId: string;

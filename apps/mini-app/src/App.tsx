@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route, Link, useNavigate } from "react-router-dom";
 import { getStartParam } from "./api";
+import { InboxBell } from "./components/InboxBell";
 import { Mark } from "./components/Mark";
 import { TabBar } from "./components/TabBar";
 import { HomePage } from "./pages/HomePage";
@@ -46,28 +47,31 @@ export function App() {
               <Mark size={26} />
               MAX <span>Sport</span>
             </Link>
-            <Link
-              to="/passport"
-              className="avatar-ring"
-              aria-label="Игровой паспорт"
-              style={{
-                background: `conic-gradient(var(--ms-accent) ${reliability * 3.6}deg, var(--ms-border-subtle) 0)`,
-              }}
-            >
-              {photoUrl ? (
-                <img
-                  className="avatar"
-                  src={photoUrl}
-                  alt=""
-                  width={32}
-                  height={32}
-                />
-              ) : (
-                <span className="avatar">
-                  {me ? initialsOf(me.user.firstName, me.user.lastName) : ""}
-                </span>
-              )}
-            </Link>
+            <div className="header-actions">
+              <InboxBell />
+              <Link
+                to="/passport"
+                className="avatar-ring"
+                aria-label="Игровой паспорт"
+                style={{
+                  background: `conic-gradient(var(--ms-accent) ${reliability * 3.6}deg, var(--ms-border-subtle) 0)`,
+                }}
+              >
+                {photoUrl ? (
+                  <img
+                    className="avatar"
+                    src={photoUrl}
+                    alt=""
+                    width={32}
+                    height={32}
+                  />
+                ) : (
+                  <span className="avatar">
+                    {me ? initialsOf(me.user.firstName, me.user.lastName) : ""}
+                  </span>
+                )}
+              </Link>
+            </div>
           </header>
 
           <Routes>

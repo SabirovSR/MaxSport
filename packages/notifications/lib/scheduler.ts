@@ -4,7 +4,7 @@ import {
   ValidationError,
   type ScheduledJobKind,
 } from "@maxsport/shared";
-import { maxUserProfileUrl, type MaxApiClient } from "@maxsport/max-channel";
+import type { MaxApiClient } from "@maxsport/max-channel";
 import type { Pool } from "@maxsport/shared";
 
 export interface NotificationScheduler {
@@ -20,11 +20,6 @@ export interface NotificationScheduler {
       lastName: string | null;
       roleRequired: string | null;
     }
-  ): Promise<void>;
-  notifyContact(
-    lobbyId: string,
-    fromUserId: string,
-    toUserId?: string
   ): Promise<void>;
 }
 
@@ -44,7 +39,15 @@ async function deliver(
 ) {
   try {
     return await maxApi.sendMessage(input);
-  } catch {
+  } catch (error) {
+    console.error("MAX deliver failed", error);
+    if (input.buttons?.length) {
+      try {
+        return await maxApi.sendMessage({ ...input, buttons: undefined });
+      } catch (retry) {
+        console.error("MAX deliver retry failed", retry);
+      }
+    }
     throw new DomainError(
       "Бот не смог доставить сообщение. Напишите боту в личку и повторите",
       "MAX_UPSTREAM"
@@ -324,90 +327,6 @@ export function createNotificationScheduler(
           ],
         ],
       });
-    },
-    async notifyContact(lobbyId, fromUserId, toUserId) {
-      const lobby = await pool.query(
-        `SELECT organizer_id FROM lobbies WHERE id = $1`,
-        [lobbyId]
-      );
-      if (!lobby.rows[0]) throw new ValidationError("Лобби не найдено");
-      const organizerId = lobby.rows[0].organizer_id as string;
-      const targetId = toUserId ?? organizerId;
-      if (fromUserId === targetId) {
-        throw new ValidationError("Нельзя написать себе");
-      }
-
-      const fromIsOrganizer = fromUserId === organizerId;
-      const toIsOrganizer = targetId === organizerId;
-      if (!fromIsOrganizer && !toIsOrganizer) {
-        throw new ForbiddenError();
-      }
-      if (fromIsOrganizer && !toIsOrganizer) {
-        const occupant = await pool.query(
-          `SELECT 1 FROM slots WHERE lobby_id = $1 AND user_id = $2`,
-          [lobbyId, targetId]
-        );
-        if (!occupant.rows[0]) throw new ForbiddenError();
-      }
-
-      const [from, to] = await Promise.all([
-        pool.query(
-          `SELECT first_name, last_name, max_user_id FROM users WHERE id = $1`,
-          [fromUserId]
-        ),
-        pool.query(`SELECT max_user_id FROM users WHERE id = $1`, [targetId]),
-      ]);
-      const targetMaxUserId = Number(to.rows[0]?.max_user_id);
-      if (!targetMaxUserId) {
-        throw new ValidationError(
-          "Нет аккаунта MAX, чтобы доставить сообщение"
-        );
-      }
-      const fromMaxUserId = Number(from.rows[0]?.max_user_id);
-      const name = [from.rows[0]?.first_name, from.rows[0]?.last_name]
-        .filter(Boolean)
-        .join(" ");
-      const who = name || "Игрок";
-      const profileUrl = fromMaxUserId
-        ? maxUserProfileUrl(fromMaxUserId)
-        : null;
-      const botUsername = process.env.BOT_USERNAME ?? "gov_max_sport_bot";
-      const buttons: Array<
-        Array<{ type: "link" | "open_app"; text: string; url: string }>
-      > = [];
-      if (profileUrl) {
-        buttons.push([
-          {
-            type: "link",
-            text: "Написать игроку",
-            url: profileUrl,
-          },
-        ]);
-      }
-      buttons.push([
-        {
-          type: "open_app",
-          text: "Открыть лобби",
-          url: `https://max.ru/${botUsername}?startapp=lobby_${lobbyId}`,
-        },
-      ]);
-      await deliver(maxApi, {
-        userId: targetMaxUserId,
-        text: profileUrl
-          ? `${who} хочет задать вопрос по вашему лобби. Нажмите, чтобы начать диалог:\n${profileUrl}`
-          : `${who} хочет задать вопрос по вашему лобби в MAX Sport.`,
-        buttons,
-      });
-      if (fromMaxUserId && toIsOrganizer && fromMaxUserId !== targetMaxUserId) {
-        try {
-          await maxApi.sendMessage({
-            userId: fromMaxUserId,
-            text: "Организатор уведомлен и скоро с вами свяжется.",
-          });
-        } catch {
-          // тост в мини-приложении всё равно покажем
-        }
-      }
     },
   };
 }
