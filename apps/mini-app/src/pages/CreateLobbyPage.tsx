@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@maxhub/max-ui";
-import { api, LEVEL_LABELS, SPORT_LABELS, type Venue } from "../api";
+import { api, LOBBY_LEVEL_LABELS, SPORT_LABELS, type Venue } from "../api";
 import { LobbyComposeFields } from "../components/LobbyComposeFields";
 import { VenuePicker, type ResolvedVenue } from "../components/VenuePicker";
 import { useToast } from "../components/Toast";
@@ -149,7 +149,7 @@ export function CreateLobbyPage() {
               value={gameLevel}
               onChange={(event) => setGameLevel(event.target.value)}
             >
-              {Object.entries(LEVEL_LABELS).map(([code, label]) => (
+              {Object.entries(LOBBY_LEVEL_LABELS).map(([code, label]) => (
                 <option key={code} value={code}>
                   {label}
                 </option>

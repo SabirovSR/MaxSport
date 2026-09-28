@@ -3,13 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@maxhub/max-ui";
 import {
   api,
-  LEVEL_LABELS,
+  LOBBY_LEVEL_LABELS,
   ROLE_OPTIONS,
   SPORT_LABELS,
   type JoinRequest,
   type Lobby,
   type PaymentHold,
 } from "../api";
+import { Chips } from "../components/Chips";
 import { ConfirmSheet } from "../components/ConfirmSheet";
 import { LobbyStatusBadge } from "../components/LobbyStatusBadge";
 import { PlayerChip } from "../components/PlayerChip";
@@ -417,8 +418,8 @@ export function LobbyPage() {
         <div className="venue-block-copy">
           <strong>{lobby.venue.name}</strong>
           <p>{lobby.venue.address}</p>
-          {LEVEL_LABELS[lobby.gameLevel] && (
-            <p className="muted">{LEVEL_LABELS[lobby.gameLevel]}</p>
+          {LOBBY_LEVEL_LABELS[lobby.gameLevel] && (
+            <p className="muted">{LOBBY_LEVEL_LABELS[lobby.gameLevel]}</p>
           )}
         </div>
 
@@ -667,7 +668,7 @@ export function LobbyPage() {
         <p className="muted" style={{ marginTop: 0 }}>
           Это ваше амплуа в составе. Нужные слоты для других не меняются.
         </p>
-        <div className="chips">
+        <Chips>
           <button
             type="button"
             className="chip"
@@ -689,7 +690,7 @@ export function LobbyPage() {
               <RoleMark role={role} /> {role}
             </button>
           ))}
-        </div>
+        </Chips>
       </Sheet>
 
       <ConfirmSheet

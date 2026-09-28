@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type GeoSuggestion, type Venue } from "../api";
+import { Chips } from "./Chips";
 import { VenueMap } from "./VenueMap";
 import type { Position } from "../lib/useGeolocation";
 
@@ -125,7 +126,7 @@ export function VenuePicker({
       <label htmlFor="venue-search">Площадка</label>
 
       {saved.length > 0 && (
-        <div className="chips">
+        <Chips>
           {saved.map((venue) => (
             <button
               key={venue.id}
@@ -143,7 +144,7 @@ export function VenuePicker({
               {venue.name}
             </button>
           ))}
-        </div>
+        </Chips>
       )}
 
       <input

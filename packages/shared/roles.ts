@@ -64,6 +64,7 @@ export const ROLE_OPTIONS: Record<Sport, string[]> = {
 };
 
 export const GAME_LEVEL_LABELS = {
+  any: "Любой",
   novice: "Новичок",
   amateur: "Любитель",
   advanced: "Продвинутый",

@@ -3,8 +3,8 @@ import { roleMarkKind, type RoleMarkKind } from "../lib/roleVisual";
 function Person() {
   return (
     <g>
-      <circle cx="8.6" cy="6.2" r="3.15" />
-      <path d="M2.5 19.7c0-3.45 2.7-6.05 6.1-6.05s6.1 2.6 6.1 6.05V20.6H2.5z" />
+      <circle cx="12" cy="6.4" r="3.15" />
+      <path d="M5.9 19.8c0-3.45 2.7-6.05 6.1-6.05s6.1 2.6 6.1 6.05V20.7H5.9z" />
     </g>
   );
 }
@@ -14,32 +14,32 @@ function Accessory({ kind }: { kind: RoleMarkKind }) {
     case "rifle":
       return (
         <g>
-          <rect x="13.4" y="13.5" width="2.1" height="2.5" rx="0.35" />
-          <rect x="15.2" y="13.15" width="5.3" height="1.55" rx="0.35" />
-          <rect x="20.4" y="13.4" width="3" height="0.95" rx="0.2" />
-          <rect x="16.7" y="11.35" width="1.55" height="1.8" rx="0.25" />
+          <rect x="12.2" y="13.6" width="1.9" height="2.3" rx="0.3" />
+          <rect x="13.8" y="13.3" width="4.8" height="1.45" rx="0.3" />
+          <rect x="18.5" y="13.55" width="2.6" height="0.9" rx="0.2" />
+          <rect x="15.2" y="11.55" width="1.4" height="1.7" rx="0.25" />
         </g>
       );
     case "assault":
       return (
         <g>
-          <rect x="13.5" y="13.7" width="1.9" height="2.3" rx="0.3" />
-          <rect x="15.1" y="13.2" width="4.6" height="1.55" rx="0.3" />
-          <rect x="19.6" y="13.5" width="2.2" height="0.9" rx="0.2" />
-          <rect x="16.5" y="14.7" width="1.15" height="2.3" rx="0.2" />
+          <rect x="12.4" y="13.8" width="1.7" height="2.1" rx="0.3" />
+          <rect x="13.8" y="13.35" width="4.2" height="1.45" rx="0.3" />
+          <rect x="17.9" y="13.6" width="2" height="0.85" rx="0.2" />
+          <rect x="15.1" y="14.75" width="1.05" height="2.1" rx="0.2" />
         </g>
       );
     case "lmg":
       return (
         <g>
-          <rect x="13.2" y="13.4" width="2.2" height="2.7" rx="0.35" />
-          <rect x="15.1" y="12.85" width="5.8" height="2" rx="0.4" />
-          <rect x="20.8" y="13.3" width="2.4" height="1.05" rx="0.2" />
+          <rect x="12" y="13.5" width="2" height="2.5" rx="0.3" />
+          <rect x="13.7" y="13" width="5.2" height="1.85" rx="0.35" />
+          <rect x="18.8" y="13.4" width="2.1" height="0.95" rx="0.2" />
           <path
-            d="M16.1 15.1v3.3M18.6 15.1v3.3"
+            d="M14.8 15v3M17.1 15v3"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.15"
+            strokeWidth="1.1"
             strokeLinecap="round"
           />
         </g>
@@ -48,45 +48,45 @@ function Accessory({ kind }: { kind: RoleMarkKind }) {
       return (
         <path
           fillRule="evenodd"
-          d="M14.3 11.1h7.1c.6 0 1.1.5 1.1 1.1v5.1c0 .6-.5 1.1-1.1 1.1h-7.1c-.6 0-1.1-.5-1.1-1.1v-5.1c0-.6.5-1.1 1.1-1.1zm2.55 2.05v1.15h-1.15v1.7h1.15v1.15h1.7v-1.15h1.15v-1.7h-1.15v-1.15z"
+          d="M13.2 11.4h6.4c.5 0 1 .45 1 1v4.6c0 .55-.5 1-1 1h-6.4c-.5 0-1-.45-1-1v-4.6c0-.55.5-1 1-1zm2.25 1.85v1.05h-1.05v1.55h1.05v1.05h1.55v-1.05h1.05v-1.55h-1.05v-1.05z"
         />
       );
     case "grenade":
       return (
         <g>
-          <rect x="17.15" y="10.9" width="2.3" height="1.7" rx="0.35" />
-          <circle cx="18.3" cy="15.55" r="3.05" />
+          <rect x="15.7" y="11.1" width="2.1" height="1.55" rx="0.3" />
+          <circle cx="16.75" cy="15.4" r="2.75" />
         </g>
       );
     case "engineer":
       return (
-        <path d="M20.85 10.2l-1.15-1.15-1.2 1.2c-.85-.45-1.9-.3-2.55.35l1.55 1.55-3.7 3.7 1.45 1.45 3.7-3.7 1.55 1.55c.65-.65.8-1.7.35-2.55l1.2-1.2z" />
+        <path d="M19.4 10.5l-1.05-1.05-1.1 1.1c-.75-.4-1.7-.25-2.3.35l1.4 1.4-3.3 3.3 1.3 1.3 3.3-3.3 1.4 1.4c.6-.6.75-1.55.35-2.3l1.1-1.1z" />
       );
     case "radio":
       return (
         <g>
-          <rect x="15.55" y="12.15" width="5.3" height="6.7" rx="1" />
-          <rect x="17.55" y="9.2" width="1.25" height="3" rx="0.35" />
-          <circle cx="18.2" cy="15.15" r="0.85" />
+          <rect x="14.4" y="12.3" width="4.7" height="6" rx="0.9" />
+          <rect x="16.15" y="9.5" width="1.15" height="2.8" rx="0.3" />
+          <circle cx="16.75" cy="15.1" r="0.75" />
         </g>
       );
     case "commander":
       return (
-        <path d="M18.15 10.15l1.15 2.35 2.6.38-1.88 1.83.44 2.58-2.31-1.22-2.31 1.22.44-2.58-1.88-1.83 2.6-.38z" />
+        <path d="M16.6 10.4l1 2.1 2.3.35-1.65 1.6.4 2.3-2.05-1.1-2.05 1.1.4-2.3-1.65-1.6 2.3-.35z" />
       );
     case "racket":
       return (
         <g>
           <ellipse
-            cx="18.35"
-            cy="12.2"
-            rx="3.15"
-            ry="3.95"
+            cx="16.7"
+            cy="12.4"
+            rx="2.8"
+            ry="3.5"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.55"
+            strokeWidth="1.45"
           />
-          <rect x="17.7" y="16" width="1.3" height="4.7" rx="0.45" />
+          <rect x="16.1" y="15.8" width="1.2" height="4.2" rx="0.4" />
         </g>
       );
     case "stick":
@@ -94,27 +94,27 @@ function Accessory({ kind }: { kind: RoleMarkKind }) {
         <g
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.7"
+          strokeWidth="1.65"
           strokeLinecap="round"
         >
-          <path d="M20.7 9.7l-6.15 10.15" />
-          <path d="M13.45 19.2h4.55" />
+          <path d="M19.2 10.1l-5.4 9.2" />
+          <path d="M12.7 18.7h4.1" />
         </g>
       );
     case "goalie":
       return (
         <g>
-          <rect x="14.15" y="11.3" width="3.15" height="4.2" rx="1" />
-          <rect x="18.15" y="11.3" width="3.15" height="4.2" rx="1" />
+          <rect x="13.1" y="11.5" width="2.85" height="3.8" rx="0.9" />
+          <rect x="16.7" y="11.5" width="2.85" height="3.8" rx="0.9" />
         </g>
       );
     case "defender":
       return (
-        <path d="M18.2 10.2l4.15 1.45v3.35c0 2.25-1.75 3.85-4.15 4.7-2.4-.85-4.15-2.45-4.15-4.7v-3.35z" />
+        <path d="M16.6 10.5l3.6 1.25v2.95c0 2-1.5 3.4-3.6 4.15-2.1-.75-3.6-2.15-3.6-4.15v-2.95z" />
       );
     case "attacker":
     case "playmaker":
-      return <circle cx="18.35" cy="14.35" r="2.55" />;
+      return <circle cx="16.7" cy="14.5" r="2.25" />;
     default:
       return null;
   }

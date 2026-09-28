@@ -90,7 +90,7 @@ describe("lobby feed with a position", () => {
 
     expect(params).toEqual(["volleyball", "amateur", 37.6173, 55.7558, 2000]);
     expect(sql).toContain("l.sport = $1");
-    expect(sql).toContain("l.game_level = $2");
+    expect(sql).toContain("l.game_level = $2 OR l.game_level = 'any'");
     expect(sql).toContain("ST_MakePoint($3, $4)");
     expect(sql).toContain("$5)");
   });

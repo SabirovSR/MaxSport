@@ -541,3 +541,8 @@ export const LEVEL_LABELS: Record<string, string> = {
   amateur: "Любитель",
   advanced: "Продвинутый",
 };
+
+export const LOBBY_LEVEL_LABELS: Record<string, string> = {
+  any: "Любой",
+  ...LEVEL_LABELS,
+};

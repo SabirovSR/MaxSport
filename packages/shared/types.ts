@@ -10,7 +10,7 @@ export type Sport =
   | "airsoft"
   | "paintball";
 
-export type GameLevel = "novice" | "amateur" | "advanced";
+export type GameLevel = "novice" | "amateur" | "advanced" | "any";
 export type JoinMode = "instant" | "approval";
 export type JoinRequestStatus =
   "pending" | "accepted" | "rejected" | "cancelled";

@@ -4,12 +4,14 @@ import { Button } from "@maxhub/max-ui";
 import {
   api,
   LEVEL_LABELS,
+  LOBBY_LEVEL_LABELS,
   SPORT_LABELS,
   type Lobby,
   type MyLobby,
   type Venue,
 } from "../api";
 import { VenueMap, type MapPoint } from "../components/VenueMap";
+import { Chips } from "../components/Chips";
 import { NeededPlayers } from "../components/NeededPlayers";
 import { SlotMatrix } from "../components/SlotMatrix";
 import { Sheet } from "../components/Sheet";
@@ -76,7 +78,7 @@ function LobbyCard({
         ) : (
           <NeededPlayers slots={lobby.slots} />
         )}
-        <span className="muted">{LEVEL_LABELS[lobby.gameLevel]}</span>
+        <span className="muted">{LOBBY_LEVEL_LABELS[lobby.gameLevel]}</span>
         {lobby.rentTotal > 0 && (
           <span className="muted">
             {formatMoney(lobby.splitPerPlayer)} с человека
@@ -241,7 +243,7 @@ export function HomePage() {
       </div>
 
       {scope === "all" && (
-        <div className="chips" role="group" aria-label="Фильтры">
+        <Chips role="group" aria-label="Фильтры">
           <button
             type="button"
             className="chip"
@@ -289,7 +291,7 @@ export function HomePage() {
               {SPORT_LABELS[code]}
             </button>
           ))}
-        </div>
+        </Chips>
       )}
 
       {scope === "all" && (
@@ -337,7 +339,7 @@ export function HomePage() {
           </p>
         )}
 
-      <div className="chips" role="tablist" aria-label="Вид">
+      <Chips role="tablist" aria-label="Вид">
         <button
           type="button"
           role="tab"
@@ -358,7 +360,7 @@ export function HomePage() {
         >
           Карта
         </button>
-      </div>
+      </Chips>
 
       {view === "feed" && (
         <button

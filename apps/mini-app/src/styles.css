@@ -23,6 +23,32 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+button,
+.venue-route {
+  line-height: 1;
+}
+
+button[class*="Button"],
+.sticky-bar button,
+.confirm-sheet-actions button,
+.request-actions button,
+.venue-route {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button[class*="Button"] [class*="Button__content"],
+button[class*="Button"] [class*="EllipsisText"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  height: auto;
+  min-height: 0;
+  padding-top: 0.12em;
+}
+
 #root,
 #root > * {
   display: flex;
@@ -137,6 +163,14 @@ body {
   scrollbar-width: none;
   margin-bottom: var(--ms-space-4);
   padding-bottom: 2px;
+  cursor: grab;
+  touch-action: pan-x;
+}
+
+.chips.is-dragging,
+.chips.is-dragging * {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .chips::-webkit-scrollbar {
@@ -256,6 +290,8 @@ body {
   border: 1px solid transparent;
   display: grid;
   place-items: center;
+  justify-items: center;
+  align-items: center;
   font-size: var(--ms-text-micro);
   text-align: center;
   overflow: hidden;
@@ -279,6 +315,7 @@ body {
   width: 22px;
   height: 22px;
   display: block;
+  margin: 0 auto;
   flex: 0 0 auto;
   fill: currentColor;
 }
@@ -558,6 +595,7 @@ body {
   color: var(--ms-text-primary);
   font-size: var(--ms-text-caption);
   font-weight: var(--ms-weight-semibold);
+  line-height: 1;
   text-align: center;
   text-decoration: none;
   overflow-wrap: anywhere;
@@ -614,16 +652,13 @@ body {
   width: 100%;
 }
 
-.confirm-sheet-actions button,
-.confirm-sheet-actions button * {
+.confirm-sheet-actions button {
   width: 100%;
   min-height: 44px;
   height: auto;
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
-  text-align: center;
-  justify-content: center;
 }
 
 .confirm-sheet-actions.is-danger > :last-child,
@@ -648,6 +683,7 @@ body {
 .sticky-bar a {
   width: 100%;
   height: auto;
+  min-height: 44px;
   white-space: normal;
 }
 

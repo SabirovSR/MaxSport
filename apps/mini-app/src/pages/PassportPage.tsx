@@ -9,6 +9,7 @@ import {
   type Lobby,
   type Passport,
 } from "../api";
+import { Chips } from "../components/Chips";
 import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
 import { useToast } from "../components/Toast";
 import { useGeolocation } from "../lib/useGeolocation";
@@ -253,7 +254,7 @@ export function PassportPage() {
           </div>
           <div className="form-group">
             <label>Предпочитаемые амплуа (до 4)</label>
-            <div className="chips">
+            <Chips>
               {(ROLE_OPTIONS[skillSport] ?? []).map((role) => (
                 <button
                   key={role}
@@ -265,7 +266,7 @@ export function PassportPage() {
                   {role}
                 </button>
               ))}
-            </div>
+            </Chips>
           </div>
           <div className="request-actions">
             {passport.sportSkills.some(
@@ -342,7 +343,7 @@ export function PassportPage() {
           решит вас отметить.
         </p>
       ) : (
-        <div className="chips" style={{ marginBottom: 0 }}>
+        <Chips style={{ marginBottom: 0 }}>
           {passport.badges.map((badge) => (
             <span key={badge.code} className="badge" title={badge.description}>
               {badge.title}
@@ -358,7 +359,7 @@ export function PassportPage() {
               {item.votes > 1 ? ` · ${item.votes}` : ""}
             </span>
           ))}
-        </div>
+        </Chips>
       )}
 
       {error && <p className="form-error">{error}</p>}
