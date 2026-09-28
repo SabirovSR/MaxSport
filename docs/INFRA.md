@@ -8,26 +8,26 @@
 
 Это URL, который в кабинете MAX вставляется в поле мини-приложения (HTTPS, ≤1024 символа). С этого же хоста позже отдаём лендинг и само Mini App.
 
-Планируемая карта путей (не реализовано):
+Карта путей:
 
-| URL | Назначение |
-| --- | --- |
-| `https://max-sport.sabirov.tech/` | Лендинг / витрина бота |
-| `https://max-sport.sabirov.tech/app` | Mini App (WebView MAX) |
-| `https://max-sport.sabirov.tech/webhook` | HTTPS webhook бота, только порт 443 |
+| URL                                      | Назначение                |
+| ---------------------------------------- | ------------------------- |
+| `https://max-sport.sabirov.tech/`        | Лендинг                   |
+| `https://max-sport.sabirov.tech/app`     | Mini App (WebView MAX)    |
+| `https://max-sport.sabirov.tech/webhook` | HTTPS webhook бота        |
 | `https://max-sport.sabirov.tech/healthz` | Проверка, что процесс жив |
 
 Диплинк Mini App: `https://max.ru/<bot>?startapp=...` — это не наш домен, это вход MAX. Payload ведёт на экран внутри приложения, которое загружено с `max-sport.sabirov.tech`.
 
 ## Сервер
 
-| Параметр | Значение |
-| --- | --- |
-| Хостер | Selectel, 2 vCPU / 4 ГБ / 50 ГБ NVMe |
-| ОС | Ubuntu 24.04 LTS |
-| IPv4 | `135.106.186.253` |
-| SSH | `deploy@135.106.186.253` (ключ локально: `max_sport_selectel`) |
-| Firewall | только `22`, `80`, `443` |
+| Параметр | Значение                                                       |
+| -------- | -------------------------------------------------------------- |
+| Хостер   | Selectel, 2 vCPU / 4 ГБ / 50 ГБ NVMe                           |
+| ОС       | Ubuntu 24.04 LTS                                               |
+| IPv4     | `135.106.186.253`                                              |
+| SSH      | `deploy@135.106.186.253` (ключ локально: `max_sport_selectel`) |
+| Firewall | только `22`, `80`, `443`                                       |
 
 На одной машине: Caddy (TLS) → Fastify, PostgreSQL+PostGIS, Redis. Postgres и Redis наружу не публикуем.
 

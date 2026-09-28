@@ -363,7 +363,7 @@ export const api = {
   confirmOnSite(slotId: string, position?: { lat: number; lng: number }) {
     return apiFetch<{ ok: boolean }>(`/api/presence/${slotId}/on-site`, {
       method: "POST",
-      body: position ? JSON.stringify(position) : undefined,
+      body: JSON.stringify(position ?? {}),
     });
   },
   confirmOnTheWay(slotId: string) {

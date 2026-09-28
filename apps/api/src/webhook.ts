@@ -218,8 +218,12 @@ export function registerWebhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
     }
 
     try {
-      const body = request.body as { update_type?: string };
-      request.log.info({ updateType: body?.update_type }, "max webhook");
+      const body = request.body;
+      const updateType =
+        body && typeof body === "object" && "update_type" in body
+          ? String((body as { update_type?: unknown }).update_type ?? "")
+          : undefined;
+      request.log.info({ updateType }, "max webhook");
       await deps.bot.handleUpdate(request.body);
     } catch (error) {
       request.log.error(error);

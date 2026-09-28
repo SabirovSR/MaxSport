@@ -1,50 +1,28 @@
-import { useEffect, useState } from "react";
-import { api, type Passport } from "../api";
+import useSWR, { mutate } from "swr";
+import { api } from "../api";
 
-let cached: Promise<Passport> | null = null;
-const subscribers = new Set<() => void>();
-
-function loadMe(): Promise<Passport> {
-  if (!cached) {
-    cached = api
-      .getPassport()
-      .then((data) => data.passport)
-      .catch((error) => {
-        cached = null;
-        throw error;
-      });
-  }
-  return cached;
-}
+const ME_KEY = "passport-me";
 
 export function refreshMe() {
-  cached = null;
-  subscribers.forEach((notify) => notify());
+  void mutate(ME_KEY);
 }
 
 export function useMe() {
-  const [me, setMe] = useState<Passport | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [revision, setRevision] = useState(0);
+  const { data, error } = useSWR(
+    ME_KEY,
+    () => api.getPassport().then((payload) => payload.passport),
+    {
+      revalidateOnFocus: true,
+      shouldRetryOnError: true,
+      errorRetryCount: 2,
+      keepPreviousData: true,
+    }
+  );
 
-  useEffect(() => {
-    const notify = () => setRevision((value) => value + 1);
-    subscribers.add(notify);
-    return () => {
-      subscribers.delete(notify);
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    setError(null);
-    loadMe()
-      .then((passport) => active && setMe(passport))
-      .catch((cause: Error) => active && setError(cause.message));
-    return () => {
-      active = false;
-    };
-  }, [revision]);
-
-  return { me, error, userId: me?.user.id ?? null };
+  return {
+    me: data ?? null,
+    error:
+      error instanceof Error ? error.message : error ? String(error) : null,
+    userId: data?.user.id ?? null,
+  };
 }
