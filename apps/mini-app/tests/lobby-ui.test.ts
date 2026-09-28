@@ -11,7 +11,7 @@ import {
   lobbyShareText,
   maxShareUrl,
 } from "../src/lib/lobbyShare";
-import { contactShareText, maxProfileUrl } from "../src/lib/maxContact";
+import { maxProfileUrl } from "../src/lib/maxContact";
 import { markableStatuses } from "../src/lib/presenceActions";
 import { parentPath } from "../src/lib/useBackButton";
 import {
@@ -132,7 +132,6 @@ describe("max contact links", () => {
     expect(maxProfileUrl({ username: "@coach" })).toBe("https://max.ru/coach");
     expect(maxProfileUrl({ maxUserId: 42 })).toBeNull();
     expect(maxProfileUrl({ username: "  ", maxUserId: 42 })).toBeNull();
-    expect(contactShareText()).toBe("Привет! Пишу по игре в MAX Sport.");
   });
 });
 
