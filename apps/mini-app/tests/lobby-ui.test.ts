@@ -128,10 +128,13 @@ describe("lobby share links", () => {
 });
 
 describe("max contact links", () => {
-  it("opens only a username profile, never /id", () => {
+  it("opens max.ru/u by system id, never /id", () => {
+    expect(maxProfileUrl({ maxUserId: 42 })).toBe("https://max.ru/u/42");
+    expect(maxProfileUrl({ username: "@coach", maxUserId: 42 })).toBe(
+      "https://max.ru/u/42"
+    );
     expect(maxProfileUrl({ username: "@coach" })).toBe("https://max.ru/coach");
-    expect(maxProfileUrl({ maxUserId: 42 })).toBeNull();
-    expect(maxProfileUrl({ username: "  ", maxUserId: 42 })).toBeNull();
+    expect(maxProfileUrl({ username: "  " })).toBeNull();
   });
 });
 

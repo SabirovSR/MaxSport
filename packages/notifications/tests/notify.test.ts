@@ -97,7 +97,9 @@ describe("notify contact", () => {
         return { rows: [{ organizer_id: "org-1" }] };
       }
       if (sql.includes("SELECT first_name")) {
-        return { rows: [{ first_name: "Иван", last_name: null }] };
+        return {
+          rows: [{ first_name: "Иван", last_name: null, max_user_id: 55 }],
+        };
       }
       if (sql.includes("SELECT max_user_id")) {
         return { rows: [{ max_user_id: 77 }] };
@@ -110,7 +112,10 @@ describe("notify contact", () => {
     );
 
     await scheduler.notifyContact("lobby-1", "player-1");
-    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledTimes(2);
     expect(sendMessage.mock.calls[0]![0].userId).toBe(77);
+    expect(sendMessage.mock.calls[0]![0].text).toContain("https://max.ru/u/55");
+    expect(sendMessage.mock.calls[1]![0].userId).toBe(55);
+    expect(sendMessage.mock.calls[1]![0].text).toContain("уведомлен");
   });
 });

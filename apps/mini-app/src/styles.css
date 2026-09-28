@@ -25,7 +25,7 @@ body {
 
 button,
 .venue-route {
-  line-height: 1;
+  line-height: 1.25;
 }
 
 button[class*="Button"],
@@ -38,15 +38,23 @@ button[class*="Button"],
   justify-content: center;
 }
 
-button[class*="Button"] [class*="Button__content"],
-button[class*="Button"] [class*="EllipsisText"] {
+button[class*="Button_size_"] {
+  overflow: visible;
+  height: auto;
+}
+
+button[class*="Button_size_"] [class*="Button__content"],
+button[class*="Button_size_"] [class*="EllipsisText"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  line-height: 1.25;
   height: auto;
   min-height: 0;
-  padding-top: 0.12em;
+  padding: 0;
 }
 
 #root,
@@ -595,7 +603,7 @@ button[class*="Button"] [class*="EllipsisText"] {
   color: var(--ms-text-primary);
   font-size: var(--ms-text-caption);
   font-weight: var(--ms-weight-semibold);
-  line-height: 1;
+  line-height: 1.25;
   text-align: center;
   text-decoration: none;
   overflow-wrap: anywhere;

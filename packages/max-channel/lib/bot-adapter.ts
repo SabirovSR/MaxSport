@@ -28,6 +28,18 @@ export interface MaxBotAdapter {
   ): void;
 }
 
+function senderUserId(ctx: Context): number {
+  const user = ctx.user as { user_id?: number } | undefined;
+  return user?.user_id ?? ctx.callback?.user?.user_id ?? 0;
+}
+
+function isGroupMessage(ctx: Context): boolean {
+  const recipient = (
+    ctx.message as { recipient?: { chat_type?: string } } | undefined
+  )?.recipient;
+  return Boolean(recipient?.chat_type && recipient.chat_type !== "dialog");
+}
+
 export function createMaxBotAdapter(token: string): MaxBotAdapter {
   if (!token) {
     return {
@@ -63,36 +75,25 @@ export function createMaxBotAdapter(token: string): MaxBotAdapter {
     console.error("MAX bot error", err);
   });
 
-  bot.command("start", async (ctx) => {
-    const handler = commands.get("start");
-    const userId = (ctx.user as { user_id?: number } | undefined)?.user_id ?? 0;
-    if (handler) {
-      await handler({
-        userId,
-        reply: async (text) => {
-          await ctx.reply(text);
-        },
-      });
-    } else {
-      await ctx.reply("MAX Sport — собери состав и не сорви игру!");
-    }
-  });
+  async function replyToUser(
+    ctx: Context,
+    text: string,
+    extra?: Parameters<Context["api"]["sendMessageToUser"]>[2]
+  ) {
+    const userId = senderUserId(ctx);
+    if (!userId) return;
+    // личка в max идёт по user_id; ctx.reply шлёт chat_id и молчит
+    await ctx.api.sendMessageToUser(userId, text, extra);
+  }
 
-  bot.on("message_callback", async (ctx) => {
-    const payload = ctx.callback?.payload ?? "";
-    const prefix = payload.split(":")[0] ?? "";
-    const handler = callbacks.get(prefix);
-    if (!handler) return;
-    const userId = ctx.callback?.user?.user_id ?? ctx.user?.user_id ?? 0;
-    await handler({
-      userId,
-      payload,
-      reply: async (text) => {
-        await ctx.reply(text);
+  function bindReplies(ctx: Context) {
+    return {
+      userId: senderUserId(ctx),
+      reply: async (text: string) => {
+        await replyToUser(ctx, text);
       },
-      replyWithButtons: async (text, buttons) => {
-        await ctx.reply({
-          text,
+      replyWithButtons: async (text: string, buttons: BotReplyButton[]) => {
+        await replyToUser(ctx, text, {
           attachments: [
             {
               type: "inline_keyboard",
@@ -107,21 +108,46 @@ export function createMaxBotAdapter(token: string): MaxBotAdapter {
               },
             },
           ],
-        } as never);
+        });
       },
-    });
-  });
+    };
+  }
+
+  async function runStart(ctx: Context) {
+    const handler = commands.get("start");
+    const { userId, reply } = bindReplies(ctx);
+    if (handler) {
+      await handler({ userId, reply });
+      return;
+    }
+    await reply("MAX Sport — собери состав и не сорви игру!");
+  }
 
   bot.on("bot_started", async (ctx) => {
-    const handler = commands.get("start");
-    const userId = (ctx.user as { user_id?: number } | undefined)?.user_id ?? 0;
-    if (handler) {
-      await handler({
-        userId,
-        reply: async (text) => {
-          await ctx.reply(text);
-        },
-      });
+    await runStart(ctx);
+  });
+
+  bot.on("message_created", async (ctx) => {
+    if (isGroupMessage(ctx)) return;
+    await runStart(ctx);
+  });
+
+  bot.on("message_callback", async (ctx) => {
+    const payload = ctx.callback?.payload ?? "";
+    const prefix = payload.split(":")[0] ?? "";
+    const handler = callbacks.get(prefix);
+    if (!handler) return;
+    const bound = bindReplies(ctx);
+    await handler({
+      userId: bound.userId,
+      payload,
+      reply: bound.reply,
+      replyWithButtons: bound.replyWithButtons,
+    });
+    try {
+      await ctx.answerOnCallback({});
+    } catch {
+      // кнопка могла уже закрыться
     }
   });
 

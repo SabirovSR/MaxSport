@@ -174,13 +174,24 @@ async function main() {
 
   notifications.start();
 
-  if (botToken && webhookSecret && publicUrl.startsWith("https")) {
+  let webhookTimer: ReturnType<typeof setInterval> | undefined;
+  const subscribeWebhook = async () => {
     try {
       await registerWebhookSubscription({ maxApi, publicUrl, webhookSecret });
       app.log.info("Webhook subscription registered");
     } catch (error) {
       app.log.warn({ err: error }, "Webhook subscription failed");
     }
+  };
+  if (botToken && webhookSecret && publicUrl.startsWith("https")) {
+    await subscribeWebhook();
+    webhookTimer = setInterval(
+      () => {
+        void subscribeWebhook();
+      },
+      4 * 60 * 60 * 1000
+    );
+    webhookTimer.unref?.();
   }
 
   let shuttingDown = false;
@@ -188,6 +199,7 @@ async function main() {
     if (shuttingDown) return;
     shuttingDown = true;
     app.log.info(`Received ${signal}, shutting down…`);
+    if (webhookTimer) clearInterval(webhookTimer);
     notifications.stop();
     const results = await Promise.allSettled([
       app.close(),
