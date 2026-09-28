@@ -366,6 +366,11 @@ button[class*="Button_size_"] [class*="EllipsisText"] {
   color: var(--ms-text-muted);
 }
 
+.slot.is-needed,
+.slot:not(.is-filled) {
+  overflow: visible;
+}
+
 .slot.is-filled {
   background: var(--ms-accent-soft);
   border-color: var(--ms-accent-line);
@@ -385,6 +390,23 @@ button[class*="Button_size_"] [class*="EllipsisText"] {
   display: block;
   margin: 0 auto;
   flex: 0 0 auto;
+  fill: currentColor;
+  overflow: visible;
+}
+
+.role-mark-edge {
+  fill: var(--ms-ink-950);
+  stroke: var(--ms-ink-950);
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.role-mark-edge * {
+  stroke: var(--ms-ink-950);
+}
+
+.role-mark-body {
   fill: currentColor;
 }
 

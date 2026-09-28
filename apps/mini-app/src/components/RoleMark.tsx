@@ -120,6 +120,15 @@ function Accessory({ kind }: { kind: RoleMarkKind }) {
   }
 }
 
+function MarkShapes({ kind }: { kind: RoleMarkKind }) {
+  return (
+    <>
+      <Person />
+      <Accessory kind={kind} />
+    </>
+  );
+}
+
 export function RoleMark({
   role,
   title,
@@ -136,8 +145,12 @@ export function RoleMark({
       role={title ? "img" : undefined}
     >
       {title ? <title>{title}</title> : null}
-      <Person />
-      <Accessory kind={kind} />
+      <g className="role-mark-edge">
+        <MarkShapes kind={kind} />
+      </g>
+      <g className="role-mark-body">
+        <MarkShapes kind={kind} />
+      </g>
     </svg>
   );
 }
