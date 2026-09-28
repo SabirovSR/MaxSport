@@ -147,6 +147,66 @@ button[class*="Button_size_"] [class*="EllipsisText"] {
   border: 2px solid transparent;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ms-space-2);
+  flex-shrink: 0;
+}
+
+.inbox-bell {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-pill);
+  background: var(--ms-surface-raised);
+  color: var(--ms-text-primary);
+  cursor: pointer;
+}
+
+.inbox-bell[aria-expanded="true"] {
+  border-color: var(--ms-accent);
+  color: var(--ms-accent);
+}
+
+.inbox-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--ms-radius-pill);
+  background: var(--ms-accent);
+  color: var(--ms-surface-base);
+  font-size: 10px;
+  font-weight: var(--ms-weight-semibold);
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.inbox-item {
+  display: grid;
+  gap: var(--ms-space-3);
+  padding: var(--ms-space-3) 0;
+  border-bottom: 1px solid var(--ms-border-subtle);
+}
+
+.inbox-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.inbox-item-head {
+  display: grid;
+  gap: 4px;
+}
+
 .avatar-ring {
   position: relative;
   display: inline-grid;

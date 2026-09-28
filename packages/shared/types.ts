@@ -132,6 +132,12 @@ export interface JoinRequest {
   resolvedAt: Date | null;
 }
 
+export interface InboxJoinRequest extends JoinRequest {
+  sport: Sport;
+  startAt: Date;
+  venueName: string;
+}
+
 export interface MyLobbySummary extends LobbyWithDetails {
   myRole: "organizer" | "player";
   mySlotId: string;

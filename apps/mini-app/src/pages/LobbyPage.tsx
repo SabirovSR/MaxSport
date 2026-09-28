@@ -31,7 +31,6 @@ import {
   lobbyShareText,
   openLobbyShare,
 } from "../lib/lobbyShare";
-import { openMaxChat } from "../lib/maxContact";
 
 const HOLD_LABELS: Record<string, string> = {
   hold_pending: "Ожидает залог",
@@ -164,7 +163,7 @@ export function LobbyPage() {
       const result = await api.requestJoin(id, slotId);
       setMyRequest(result.request);
       setPicking(false);
-      showToast("Заявка отправлена организатору");
+      showToast("Заявка отправлена. Организатор увидит её в лобби");
     } catch (cause) {
       const message =
         cause instanceof Error ? cause.message : "Не удалось отправить заявку";
@@ -188,27 +187,6 @@ export function LobbyPage() {
       const message =
         cause instanceof Error ? cause.message : "Не удалось отменить заявку";
       setError(message);
-      showToast(message, "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function writeToOrganizer() {
-    if (!id || !lobby) return;
-    openMaxChat({
-      username: lobby.organizer.username,
-      maxUserId: lobby.organizer.maxUserId,
-    });
-    setBusy(true);
-    try {
-      await api.contactLobby(id);
-      showToast("Организатор уведомлен и скоро с вами свяжется");
-    } catch (cause) {
-      const message =
-        cause instanceof Error
-          ? cause.message
-          : "Не удалось написать организатору";
       showToast(message, "error");
     } finally {
       setBusy(false);
@@ -573,17 +551,6 @@ export function LobbyPage() {
         <Button variant="secondary" loading={busy} onClick={share}>
           Поделиться
         </Button>
-        {!isOrganizer &&
-          lobby.status !== "cancelled" &&
-          lobby.status !== "finished" && (
-            <Button
-              variant="secondary"
-              loading={busy}
-              onClick={writeToOrganizer}
-            >
-              Написать
-            </Button>
-          )}
         {!mySlot && !pendingRequest && freeSlots.length > 0 && joinable && (
           <Button variant="primary" loading={busy} onClick={join}>
             {lobby.joinMode === "approval" ? "Отправить заявку" : "Занять слот"}
