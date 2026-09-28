@@ -1,8 +1,15 @@
-import { useEffect } from "react";
-import { Routes, Route, Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import {
+  Routes,
+  Route,
+  Link,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { getStartParam } from "./api";
 import { InboxBell } from "./components/InboxBell";
 import { Mark } from "./components/Mark";
+import { Onboarding } from "./components/Onboarding";
 import { TabBar } from "./components/TabBar";
 import { HomePage } from "./pages/HomePage";
 import { LobbyPage } from "./pages/LobbyPage";
@@ -10,6 +17,7 @@ import { CreateLobbyPage } from "./pages/CreateLobbyPage";
 import { PassportPage } from "./pages/PassportPage";
 import { RosterPage } from "./pages/RosterPage";
 import { KarmaPage } from "./pages/KarmaPage";
+import { shouldShowOnboarding, subscribeOnboarding } from "./lib/onboarding";
 import { useMe } from "./lib/useMe";
 import { useBackButton } from "./lib/useBackButton";
 import { initialsOf } from "./lib/format";
@@ -18,14 +26,31 @@ import { EditLobbyPage } from "./pages/EditLobbyPage";
 
 export function App() {
   const navigate = useNavigate();
+  const { search } = useLocation();
   useBackButton();
   const { me } = useMe();
   const photoUrl = window.WebApp?.initDataUnsafe?.user?.photo_url;
   const reliability = me?.user.reliabilityPct ?? 0;
+  const [onboarding, setOnboarding] = useState(false);
 
   useEffect(() => {
     window.WebApp?.ready?.();
   }, []);
+
+  useEffect(() => subscribeOnboarding(() => setOnboarding(true)), []);
+
+  useEffect(() => {
+    if (new URLSearchParams(search).get("onboarding") === "1") {
+      setOnboarding(true);
+    }
+  }, [search]);
+
+  useEffect(() => {
+    if (!me) return;
+    const start = getStartParam();
+    if (start?.startsWith("lobby_") || start?.startsWith("roster_")) return;
+    if (shouldShowOnboarding(me.user.gamesPlayed)) setOnboarding(true);
+  }, [me]);
 
   useEffect(() => {
     const start = getStartParam();
@@ -87,6 +112,7 @@ export function App() {
         </div>
         <TabBar />
       </div>
+      {onboarding && <Onboarding onClose={() => setOnboarding(false)} />}
     </ToastProvider>
   );
 }

@@ -397,17 +397,24 @@ button[class*="Button_size_"] [class*="EllipsisText"] {
 .role-mark-edge {
   fill: var(--ms-ink-950);
   stroke: var(--ms-ink-950);
-  stroke-width: 2.6;
+  stroke-width: 2.8;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .role-mark-edge * {
   stroke: var(--ms-ink-950);
+  stroke-width: 2.8;
 }
 
 .role-mark-body {
   fill: currentColor;
+  stroke: none;
+}
+
+.role-mark-body [fill="none"] {
+  fill: none;
+  stroke: currentColor;
 }
 
 .slot .role-mark {
@@ -1311,6 +1318,176 @@ button[class*="Button_size_"] [class*="EllipsisText"] {
 
 .toast-error {
   border-color: var(--ms-state-noshow);
+}
+
+.onboard {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ms-layer-modal);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: var(--ms-space-6) var(--ms-space-4)
+    calc(var(--ms-space-6) + env(safe-area-inset-bottom, 0px));
+  background: var(--ms-surface-base);
+  color: var(--ms-text-primary);
+}
+
+.onboard-art {
+  flex: 1 0 auto;
+  min-height: 268px;
+  display: grid;
+  place-items: center;
+}
+
+.onboard-title {
+  margin: 0 0 var(--ms-space-3);
+  font-size: var(--ms-text-title);
+  font-weight: var(--ms-weight-semibold);
+  letter-spacing: var(--ms-tracking-tight);
+  text-align: center;
+}
+
+.onboard-text {
+  margin: 0;
+  color: var(--ms-text-secondary);
+  text-align: center;
+}
+
+.onboard-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: var(--ms-space-5) 0 var(--ms-space-4);
+}
+
+.onboard-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--ms-radius-pill);
+  background: var(--ms-border-subtle);
+}
+
+.onboard-dots span.is-on {
+  width: 18px;
+  background: var(--ms-accent);
+}
+
+.onboard-actions {
+  display: grid;
+  gap: var(--ms-space-2);
+}
+
+.onboard-skip {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ms-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.onboard-art-levels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ms-space-2);
+}
+
+.onboard-art-levels span {
+  padding: var(--ms-space-2) var(--ms-space-3);
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-pill);
+  background: var(--ms-surface-raised);
+  color: var(--ms-text-secondary);
+  font-size: var(--ms-text-caption);
+  font-weight: var(--ms-weight-semibold);
+}
+
+.onboard-art-levels .is-on {
+  border-color: var(--ms-accent);
+  background: var(--ms-accent);
+  color: var(--ms-accent-on);
+}
+
+.onboard-art-slots {
+  display: grid;
+  grid-template-columns: repeat(2, 108px);
+  gap: var(--ms-space-4) var(--ms-space-3);
+}
+
+.onboard-slot {
+  display: grid;
+  justify-items: center;
+  gap: var(--ms-space-2);
+}
+
+.onboard-slot small {
+  color: var(--ms-text-secondary);
+  font-size: var(--ms-text-caption);
+  font-weight: var(--ms-weight-semibold);
+}
+
+.onboard-art-slots .slot {
+  width: 108px;
+  height: 108px;
+  padding: var(--ms-space-3);
+  color: var(--ms-accent-text);
+}
+
+.onboard-art-slots .slot:not(.is-needed) {
+  color: var(--ms-text-muted);
+  border: 1px dashed var(--ms-border-subtle);
+}
+
+.onboard-art-slots .role-mark {
+  width: 64px;
+  height: 64px;
+}
+
+.onboard-art-karma {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--ms-accent) 345deg,
+    var(--ms-border-subtle) 0
+  );
+  color: var(--ms-text-primary);
+}
+
+.onboard-art-karma::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background: var(--ms-surface-base);
+}
+
+.onboard-art-karma strong,
+.onboard-art-karma small {
+  position: relative;
+  z-index: 1;
+}
+
+.onboard-art-karma strong {
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.onboard-art-karma small {
+  color: var(--ms-text-muted);
+  font-size: var(--ms-text-caption);
+  line-height: 1.2;
+  text-align: center;
 }
 
 @media (max-width: 390px) {
