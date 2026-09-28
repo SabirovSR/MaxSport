@@ -1,4 +1,4 @@
-import { LEVEL_LABELS, ROLE_OPTIONS } from "../api";
+import { LOBBY_LEVEL_LABELS, ROLE_OPTIONS } from "../api";
 import { formatMoney, formatSlots, parseCount, slotNoun } from "../lib/format";
 import { RoleMark } from "./RoleMark";
 
@@ -50,7 +50,7 @@ export function LobbyComposeFields({
             value={values.gameLevel}
             onChange={(event) => onChange({ gameLevel: event.target.value })}
           >
-            {Object.entries(LEVEL_LABELS).map(([code, label]) => (
+            {Object.entries(LOBBY_LEVEL_LABELS).map(([code, label]) => (
               <option key={code} value={code}>
                 {label}
               </option>

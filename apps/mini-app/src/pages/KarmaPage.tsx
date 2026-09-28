@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@maxhub/max-ui";
 import { api, type Lobby, type RosterEntry } from "../api";
+import { Chips } from "../components/Chips";
 import { EmptyState, ErrorState, LineSkeleton } from "../components/States";
 import { useToast } from "../components/Toast";
 import { refreshMe, useMe } from "../lib/useMe";
@@ -154,7 +155,7 @@ export function KarmaPage() {
             </div>
           </div>
 
-          <div className="chips" style={{ marginTop: "var(--ms-space-3)" }}>
+          <Chips style={{ marginTop: "var(--ms-space-3)" }}>
             {RELIABILITY.map((option) => (
               <button
                 key={option.value}
@@ -178,12 +179,12 @@ export function KarmaPage() {
                 {option.label}
               </button>
             ))}
-          </div>
+          </Chips>
 
           {tags.length > 0 && (
             <>
               <p className="form-hint">Отметить за игру:</p>
-              <div className="chips" style={{ marginBottom: 0 }}>
+              <Chips style={{ marginBottom: 0 }}>
                 {tags.map((tag) => (
                   <button
                     key={tag}
@@ -209,7 +210,7 @@ export function KarmaPage() {
                     {tag}
                   </button>
                 ))}
-              </div>
+              </Chips>
             </>
           )}
           <div style={{ marginTop: "var(--ms-space-3)" }}>

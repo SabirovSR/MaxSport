@@ -309,7 +309,7 @@ export function createLobbyService(
       if (!isSport(input.sport)) {
         throw new ValidationError("Неизвестный вид спорта");
       }
-      if (!["novice", "amateur", "advanced"].includes(input.gameLevel)) {
+      if (!["any", "novice", "amateur", "advanced"].includes(input.gameLevel)) {
         throw new ValidationError("Некорректный уровень игры");
       }
       if (
@@ -436,7 +436,9 @@ export function createLobbyService(
       }
       if (filter.gameLevel) {
         params.push(filter.gameLevel);
-        conditions.push(`l.game_level = $${params.length}`);
+        conditions.push(
+          `(l.game_level = $${params.length} OR l.game_level = 'any')`
+        );
       }
       if (filter.hotOnly) {
         conditions.push(`l.start_at <= NOW() + INTERVAL '3 hours'`);
@@ -929,7 +931,7 @@ export function createLobbyService(
         }
         if (
           patch.gameLevel != null &&
-          !["novice", "amateur", "advanced"].includes(patch.gameLevel)
+          !["any", "novice", "amateur", "advanced"].includes(patch.gameLevel)
         ) {
           throw new ValidationError("Некорректный уровень игры");
         }
