@@ -379,9 +379,17 @@ button[class*="Button_size_"] [class*="EllipsisText"] {
 }
 
 .slot.is-needed {
-  border: 1px dashed var(--ms-accent);
   background: transparent;
-  color: var(--ms-accent-text);
+  color: var(--ms-accent);
+}
+
+.slot:has(.role-mark) {
+  border: 2px dashed var(--ms-lime-600);
+  background: transparent;
+}
+
+.slot:not(.is-needed):not(.is-filled) .role-mark {
+  color: var(--ms-text-muted);
 }
 
 .role-mark {
@@ -390,6 +398,7 @@ button[class*="Button_size_"] [class*="EllipsisText"] {
   display: block;
   margin: 0 auto;
   flex: 0 0 auto;
+  color: var(--ms-accent);
   fill: currentColor;
   overflow: visible;
 }
@@ -480,7 +489,7 @@ button[class*="Button_size_"] [class*="EllipsisText"] {
   width: 22px;
   height: 22px;
   place-items: center;
-  color: var(--ms-accent-text);
+  color: var(--ms-accent);
 }
 
 .needed-players {
@@ -1434,12 +1443,11 @@ button[class*="Button_size_"] [class*="EllipsisText"] {
   width: 108px;
   height: 108px;
   padding: var(--ms-space-3);
-  color: var(--ms-accent-text);
+  color: var(--ms-accent);
 }
 
 .onboard-art-slots .slot:not(.is-needed) {
   color: var(--ms-text-muted);
-  border: 1px dashed var(--ms-border-subtle);
 }
 
 .onboard-art-slots .role-mark {
