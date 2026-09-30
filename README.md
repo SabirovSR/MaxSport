@@ -63,3 +63,7 @@ docs/             продукт, стек, инфраструктура, ADR
 ## Деплой
 
 Push в `main` → GitHub Actions → GHCR → SSH на VPS. См. [docs/ops/SETUP.md](docs/ops/SETUP.md).
+
+## Расширенная техническая документация
+
+Стек, архитектура, API, миграции, окружение и прод собраны в одном файле: [TECHNICAL.md](TECHNICAL.md).
